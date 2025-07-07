@@ -3,7 +3,9 @@ const express = require('express');
 require('dotenv').config();
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const sendOtpRoutes = require("./Routes/sendOtpRoute");
+
+const connectDB = require("./Config/db");
+connectDB();
 
 const app = express();
 
@@ -15,7 +17,8 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Routes
-app.use("/api", sendOtpRoutes);
+const otpRoutes = require("./Routes/otpRoutes");
+app.use("/api", otpRoutes);
 
 // Root route
 app.get('/', (req, res) => {
