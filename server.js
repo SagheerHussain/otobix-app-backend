@@ -1,11 +1,23 @@
 // server.js
 const express = require('express');
-const app = express();
 require('dotenv').config();
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const sendOtpRoutes = require("./Routes/sendOtpRoute");
+
+const app = express();
+
 
 const PORT = process.env.PORT || 3000;
 
-// Simple route
+// Middlewares
+app.use(cors());
+app.use(bodyParser.json());
+
+// Routes
+app.use("/api", sendOtpRoutes);
+
+// Root route
 app.get('/', (req, res) => {
     res.send('Otobix server is running');
 });
