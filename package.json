@@ -1,0 +1,17 @@
+{
+  "name": "otobix_backend",
+  "version": "1.0.0",
+  "description": "Your trusted platform to explore car listings, place bids in real-time, and secure great deals at online vehicle auctions.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "Muhammad Ahsan",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.0.1",
+    "express": "^5.1.0",
+    "nodemon": "^3.1.10"
+  }
+}
