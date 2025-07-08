@@ -17,8 +17,16 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Routes
+// OTP Routes
 const otpRoutes = require("./Routes/otpRoutes");
 app.use("/api", otpRoutes);
+
+// User Routes
+const userRoutes = require("./Routes/userRoutes");
+app.use("/api", userRoutes);
+
+
+
 
 // Root route
 app.get('/', (req, res) => {
