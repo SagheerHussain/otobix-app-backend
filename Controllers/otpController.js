@@ -23,8 +23,6 @@ const sendOtp = async (req, res) => {
         }
 
         const otp = Math.floor(100000 + Math.random() * 900000);
-
-        // Save OTP in memory with expiry
         otpStore[phoneNumber] = {
             otp,
             expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
