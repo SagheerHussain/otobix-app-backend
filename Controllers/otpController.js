@@ -8,12 +8,10 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioClient = twilio(accountSid, authToken);
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 
-// Simple in-memory store
 const otpStore = {};
-
 const sendOtp = async (req, res) => {
     try {
-        const { phoneNumber } = req.body;
+        let { phoneNumber } = req.body;
 
         if (!phoneNumber) {
             return res.status(400).json({
@@ -22,10 +20,16 @@ const sendOtp = async (req, res) => {
             });
         }
 
+        if (phoneNumber.startsWith('0')) {
+            phoneNumber = '+92' + phoneNumber.slice(1);
+        } else if (!phoneNumber.startsWith('+92')) {
+            phoneNumber = '+92' + phoneNumber;
+        }
+
         const otp = Math.floor(100000 + Math.random() * 900000);
         otpStore[phoneNumber] = {
             otp,
-            expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+            expiresAt: Date.now() + 5 * 60 * 1000, 
         };
 
         await twilioClient.messages.create({
@@ -37,7 +41,6 @@ const sendOtp = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "OTP sent successfully",
-            // otp, // remove in production
         });
     } catch (error) {
         console.error("Error sending OTP:", error.message);
@@ -51,13 +54,19 @@ const sendOtp = async (req, res) => {
 
 const verifyOtp = (req, res) => {
     try {
-        const { phoneNumber, otp } = req.body;
+        let { phoneNumber, otp } = req.body;
 
         if (!phoneNumber || !otp) {
             return res.status(400).json({
                 success: false,
                 message: "Phone number and OTP are required",
             });
+        }
+
+        if (phoneNumber.startsWith('0')) {
+            phoneNumber = '+92' + phoneNumber.slice(1);
+        } else if (!phoneNumber.startsWith('+92')) {
+            phoneNumber = '+92' + phoneNumber;
         }
 
         const record = otpStore[phoneNumber];
@@ -83,8 +92,6 @@ const verifyOtp = (req, res) => {
                 message: "Invalid OTP",
             });
         }
-
-        // OTP verified
         delete otpStore[phoneNumber];
 
         return res.status(200).json({
@@ -100,7 +107,6 @@ const verifyOtp = (req, res) => {
         });
     }
 };
-
 module.exports = {
     sendOtp,
     verifyOtp,
