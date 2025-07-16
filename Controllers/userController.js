@@ -1,4 +1,4 @@
-const Dealer = require('../models/userModel');
+const Dealer = require('../Models/userModel');
 exports.register = async (req, res) => {
   try {
     const {
