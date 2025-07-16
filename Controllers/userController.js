@@ -1,8 +1,11 @@
-const Dealer = require('../Models/userModel');
+const User = require('../Models/userModel');
+const sendEmail = require('../Utils/node_mailer');
+
 exports.register = async (req, res) => {
   try {
     const {
       userType,
+      contactNumber,
       location,
       dealerName,
       dealerEmail,
@@ -12,24 +15,44 @@ exports.register = async (req, res) => {
       primaryContactNumber,
       secondaryContactPerson,
       secondaryContactNumber,
-      addressList,
-      contactNumber,
       password,
-      approvalStatus
+      addressList
     } = req.body;
-    if (!userType || !location || !dealerName || !dealerEmail || !dealershipName ||
-        !entityType || !primaryContactPerson || !primaryContactNumber || !addressList || !contactNumber || !password) {
+
+    if (!userType || !contactNumber || !location || !password || !addressList) {
       return res.status(400).json({ message: 'Please fill all required fields.' });
     }
 
-     
-    const existingDealer = await Dealer.findOne({ dealerEmail });
-    if (existingDealer) {
-      return res.status(400).json({ message: 'Dealer already exists with this email.' });
+    if (userType === 'Dealer') {
+      if (
+        !dealerName || !dealerEmail || !dealershipName || !entityType ||
+        !primaryContactPerson || !primaryContactNumber
+      ) {
+        return res.status(400).json({ message: 'Missing required Dealer fields.' });
+      }
+
+      const existingDealer = await User.findOne({ dealerEmail });
+      if (existingDealer) {
+        return res.status(400).json({ message: 'Dealer already exists with this email.' });
+      }
+
+    } else if (userType === 'customer' || userType === 'sales manager') {
+      if (!dealerName || !dealerEmail) {
+        return res.status(400).json({ message: `Missing required fields for ${userType}.` });
+      }
+
+      const existingUser = await User.findOne({ dealerEmail });
+      if (existingUser) {
+        return res.status(400).json({ message: `${userType} already exists with this email.` });
+      }
+
+    } else {
+      return res.status(400).json({ message: 'Invalid userType provided.' });
     }
 
-    const dealer = new Dealer({
+    const user = new User({
       userType,
+      contactNumber,
       location,
       dealerName,
       dealerEmail,
@@ -39,24 +62,31 @@ exports.register = async (req, res) => {
       primaryContactNumber,
       secondaryContactPerson,
       secondaryContactNumber,
-      addressList,
-      contactNumber,
       password,
+      addressList,
       approvalStatus: 'Pending'
     });
 
-    await dealer.save();
+    await user.save();
+
+    // Send email
+    await sendEmail(
+      dealerEmail,
+      'Welcome to Otobix!',
+      `Dear ${dealerName},\n\nThank you for registering with Otobix.\nYour account is under review.\n\nBest regards,\nTeam Otobix`
+    );
 
     res.status(201).json({
-      message: 'Dealer registered successfully!',
-      dealer,
+      message: `${userType} registered successfully!`,
+      user,
     });
 
   } catch (error) {
-    console.error(error);
+    console.error('Register error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 exports.getAllUsers = async (req, res) => {
   try {
