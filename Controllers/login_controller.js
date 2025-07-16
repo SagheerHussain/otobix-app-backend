@@ -21,12 +21,10 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid contact number' });
     }
 
-    // Check plain text password
     if (user.password !== password) {
       return res.status(401).json({ message: 'Invalid password' });
     }
 
-    // Generate JWT token
     const token = jwt.sign(
       {
         id: user._id,
