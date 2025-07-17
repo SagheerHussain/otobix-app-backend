@@ -14,8 +14,14 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(bodyParser.json());
 
-const otpRoutes = require("./Routes/otpRoutes");
-app.use("/api", otpRoutes);
+// const otpRoutes = require("./Routes/otpRoutes");
+// app.use("/api", otpRoutes);
+
+const otpRoutes = require('./Routes/otpRoutes');
+
+app.use(express.json());
+app.use('/api/otp', otpRoutes);
+///////////////////////////
 
 const userRoutes = require("./Routes/userRoutes");
 app.use("/api/user", userRoutes);
