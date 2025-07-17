@@ -1,79 +1,83 @@
 const User = require('../Models/userModel');
 const sendEmail = require('../Utils/node_mailer');
-
 exports.register = async (req, res) => {
-  try {
-    const {
-      userRole,
-      phoneNumber,
-      location,
-      userName,
-      email,
-      dealershipName,
-      entityType,
-      primaryContactPerson,
-      primaryContactNumber,
-      secondaryContactPerson,
-      secondaryContactNumber,
-      password,
-      addressList
-    } = req.body;
-
-    if (!userRole || !userName || !email || !phoneNumber || !location || !password || !addressList) {
-      return res.status(400).json({ message: 'Please fill all required fields.' });
-    }
-
-    if (userRole === 'Dealer') {
-      if (!dealershipName || !entityType || !primaryContactPerson || !primaryContactNumber) {
-        return res.status(400).json({ message: 'Missing required Dealer fields.' });
+    try {
+      const {
+        userRole,
+        phoneNumber,
+        location,
+        userName,
+        email,
+        dealershipName,
+        entityType,
+        primaryContactPerson,
+        primaryContactNumber,
+        secondaryContactPerson,
+        secondaryContactNumber,
+        password,
+        addressList
+      } = req.body;
+  
+      if (!userRole || !userName || !email || !phoneNumber || !location || !password || !addressList) {
+        return res.status(400).json({ message: 'Please fill all required fields.' });
       }
-    } else if (!['customer', 'sales manager', 'admin'].includes(userRole)) {
-      return res.status(400).json({ message: 'Invalid userRole provided.' });
+  
+      if (userRole === 'Dealer') {
+        if (!dealershipName || !entityType || !primaryContactPerson || !primaryContactNumber) {
+          return res.status(400).json({ message: 'Missing required Dealer fields.' });
+        }
+      } else if (!['customer', 'sales manager', 'admin'].includes(userRole)) {
+        return res.status(400).json({ message: 'Invalid userRole provided.' });
+      }
+  
+      // 🔍 Check if email already exists
+      const existingEmail = await User.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({ message: 'Email already exists.' });
+      }
+  
+      // 🔍 Check if phone number already exists
+      const existingPhone = await User.findOne({ phoneNumber });
+      if (existingPhone) {
+        return res.status(400).json({ message: 'Phone Number already exists.' });
+      }
+  
+      const user = new User({
+        userRole,
+        phoneNumber,
+        location,
+        userName,
+        email,
+        dealershipName,
+        entityType,
+        primaryContactPerson,
+        primaryContactNumber,
+        secondaryContactPerson: secondaryContactPerson || '',
+        secondaryContactNumber: secondaryContactNumber || '',
+        password,
+        addressList,
+        approvalStatus: 'Pending'
+      });
+  
+      await user.save();
+  
+      await sendEmail(
+        email,
+        'Welcome to Otobix!',
+        `Dear ${userName},\n\nThank you for registering with Otobix.\nYour account is under review.\n\nBest regards,\nTeam Otobix`
+      );
+  
+      res.status(201).json({
+        message: `${userRole} registered successfully!`,
+        user
+      });
+  
+    } catch (error) {
+      console.error('Register error:', error);
+      res.status(500).json({ message: 'Server error' });
     }
-
-    const existingUser = await User.findOne({
-      $or: [{ email }, { phoneNumber }]
-    });
-
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email or Phone Number already exists.' });
-    }
-
-    const user = new User({
-      userRole,
-      phoneNumber,
-      location,
-      userName,
-      email,
-      dealershipName,
-      entityType,
-      primaryContactPerson,
-      primaryContactNumber,
-      secondaryContactPerson: secondaryContactPerson || '',
-      secondaryContactNumber: secondaryContactNumber || '',
-      password,
-      addressList,
-      approvalStatus: 'Pending'
-    });
-
-    await user.save();
-
-    await sendEmail(
-      email,
-      'Welcome to Otobix!',
-      `Dear ${userName},\n\nThank you for registering with Otobix.\nYour account is under review.\n\nBest regards,\nTeam Otobix`
-    );
-
-    res.status(201).json({
-      message: `${userRole} registered successfully!`,
-      user
-    });
-
-  } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
+  };
+  
 
 exports.getAllUsers = async (req, res) => {
   try {
