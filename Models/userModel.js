@@ -22,7 +22,7 @@ const userschema = new mongoose.Schema({
   dealerEmail: {
     type: String,
     required: true,
-    unique: true,
+    // unique: true,
   },
 
   // Dealer-only fields

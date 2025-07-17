@@ -9,14 +9,12 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Dealer name, contact number, and password are required' });
     }
 
-    // Find user by dealerName and include password
     const user = await User.findOne({ dealerName }).select('+password');
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check contact number
     if (user.contactNumber !== contactNumber) {
       return res.status(401).json({ message: 'Invalid contact number' });
     }
