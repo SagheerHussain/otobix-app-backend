@@ -4,11 +4,11 @@ const sendEmail = require('../Utils/node_mailer');
 exports.register = async (req, res) => {
   try {
     const {
-      userType,
-      contactNumber,
+      userRole,
+      phoneNumber,
       location,
-      dealerName,
-      dealerEmail,
+      userName,
+      email,
       dealershipName,
       entityType,
       primaryContactPerson,
@@ -19,49 +19,38 @@ exports.register = async (req, res) => {
       addressList
     } = req.body;
 
-    if (!userType || !contactNumber || !location || !password || !addressList) {
+    if (!userRole || !userName || !email || !phoneNumber || !location || !password || !addressList) {
       return res.status(400).json({ message: 'Please fill all required fields.' });
     }
 
-    if (userType === 'Dealer') {
-      if (
-        !dealerName || !dealerEmail || !dealershipName || !entityType ||
-        !primaryContactPerson || !primaryContactNumber
-      ) {
+    if (userRole === 'Dealer') {
+      if (!dealershipName || !entityType || !primaryContactPerson || !primaryContactNumber) {
         return res.status(400).json({ message: 'Missing required Dealer fields.' });
       }
+    } else if (!['customer', 'sales manager', 'admin'].includes(userRole)) {
+      return res.status(400).json({ message: 'Invalid userRole provided.' });
+    }
 
-      const existingDealer = await User.findOne({ dealerEmail });
-      if (existingDealer) {
-        return res.status(400).json({ message: 'Dealer already exists with this email.' });
-      }
+    const existingUser = await User.findOne({
+      $or: [{ email }, { phoneNumber }]
+    });
 
-    } else if (userType === 'customer' || userType === 'sales manager') {
-      if (!dealerName || !dealerEmail) {
-        return res.status(400).json({ message: `Missing required fields for ${userType}.` });
-      }
-
-      const existingUser = await User.findOne({ dealerEmail });
-      if (existingUser) {
-        return res.status(400).json({ message: `${userType} already exists with this email.` });
-      }
-
-    } else {
-      return res.status(400).json({ message: 'Invalid userType provided.' });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email or Phone Number already exists.' });
     }
 
     const user = new User({
-      userType,
-      contactNumber,
+      userRole,
+      phoneNumber,
       location,
-      dealerName,
-      dealerEmail,
+      userName,
+      email,
       dealershipName,
       entityType,
       primaryContactPerson,
       primaryContactNumber,
-      secondaryContactPerson,
-      secondaryContactNumber,
+      secondaryContactPerson: secondaryContactPerson || '',
+      secondaryContactNumber: secondaryContactNumber || '',
       password,
       addressList,
       approvalStatus: 'Pending'
@@ -69,16 +58,15 @@ exports.register = async (req, res) => {
 
     await user.save();
 
-    // Send email
     await sendEmail(
-      dealerEmail,
+      email,
       'Welcome to Otobix!',
-      `Dear ${dealerName},\n\nThank you for registering with Otobix.\nYour account is under review.\n\nBest regards,\nTeam Otobix`
+      `Dear ${userName},\n\nThank you for registering with Otobix.\nYour account is under review.\n\nBest regards,\nTeam Otobix`
     );
 
     res.status(201).json({
-      message: `${userType} registered successfully!`,
-      user,
+      message: `${userRole} registered successfully!`,
+      user
     });
 
   } catch (error) {
@@ -87,10 +75,9 @@ exports.register = async (req, res) => {
   }
 };
 
-
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await Dealer.find({ approvalStatus: "Pending" });
+    const users = await User.find({ approvalStatus: "Pending" });
 
     res.status(200).json({
       success: true,
@@ -112,7 +99,6 @@ exports.updateUserStatus = async (req, res) => {
     const userId = req.params.id;
     const { approvalStatus, comment } = req.body;
 
-    // Validate approvalStatus
     if (!['Approved', 'Rejected'].includes(approvalStatus)) {
       return res.status(400).json({
         success: false,
@@ -120,8 +106,7 @@ exports.updateUserStatus = async (req, res) => {
       });
     }
 
-    // Find user
-    const user = await Dealer.findById(userId);
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -129,15 +114,8 @@ exports.updateUserStatus = async (req, res) => {
       });
     }
 
-    // Update status
     user.approvalStatus = approvalStatus;
-
-    if (approvalStatus === 'Rejected') {
-      // optionally save comment if rejected
-      user.rejectionComment = comment || '';
-    } else {
-      user.rejectionComment = ''; // clear any previous comment
-    }
+    user.rejectionComment = approvalStatus === 'Rejected' ? (comment || '') : '';
 
     await user.save();
 
@@ -155,10 +133,11 @@ exports.updateUserStatus = async (req, res) => {
     });
   }
 };
+
 exports.logout = async (req, res) => {
   try {
     const userId = req.params.id;
-    const user = await Dealer.findById(userId);
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -183,13 +162,12 @@ exports.logout = async (req, res) => {
   }
 };
 
-
 exports.getUserStatusById = async (req, res) => {
   try {
     const userId = req.params.id;
 
-    const user = await Dealer.findById(userId).select(
-      'approvalStatus  rejectionComment dealerName dealerEmail'
+    const user = await User.findById(userId).select(
+      'approvalStatus rejectionComment userName email'
     );
 
     if (!user) {
@@ -214,16 +192,24 @@ exports.getUserStatusById = async (req, res) => {
   }
 };
 
+exports.checkUsername = async (req, res) => {
+  try {
+    const { username } = req.query;
 
+    if (!username || username.trim() === '') {
+      return res.status(400).json({ message: 'Username is required.' });
+    }
 
+    const existingUser = await User.findOne({ userName: { $regex: `^${username}$`, $options: 'i' } });
 
+    if (existingUser) {
+      return res.status(200).json({ available: false, message: 'Username already exists.' });
+    } else {
+      return res.status(200).json({ available: true, message: 'Username is available.' });
+    }
 
-
-
-
-
-
-
-
-
-
+  } catch (error) {
+    console.error('Check Username Error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

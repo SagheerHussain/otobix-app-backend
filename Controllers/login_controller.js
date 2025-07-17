@@ -9,13 +9,12 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Dealer name, contact number, and password are required' });
     }
 
-    const user = await User.findOne({ dealerName }).select('+password');
+    const user = await User.findOne({ userName: dealerName }).select('+password');
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-
-    if (user.contactNumber !== contactNumber) {
+    if (user.phoneNumber !== contactNumber) {
       return res.status(401).json({ message: 'Invalid contact number' });
     }
 
@@ -26,8 +25,8 @@ exports.login = async (req, res) => {
     const token = jwt.sign(
       {
         id: user._id,
-        dealerName: user.dealerName,
-        userType: user.userType
+        dealerName: user.userName,
+        userType: user.userRole
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
@@ -38,10 +37,10 @@ exports.login = async (req, res) => {
       token,
       user: {
         id: user._id,
-        dealerName: user.dealerName,
-        userType: user.userType,
+        dealerName: user.userName,
+        userType: user.userRole,
         approvalStatus: user.approvalStatus,
-        contactNumber: user.contactNumber
+        contactNumber: user.phoneNumber
       }
     });
 
