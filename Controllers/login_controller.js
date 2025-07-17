@@ -6,7 +6,7 @@ exports.login = async (req, res) => {
     const { userName, phoneNumber, password } = req.body;
 
     if (!userName || !phoneNumber || !password) {
-      return res.status(400).json({ message: 'Dealer name, contact number, and password are required' });
+      return res.status(400).json({ message: 'user name, contact number, and password are required' });
     }
 
     const user = await User.findOne({ userName: userName }).select('+password');
