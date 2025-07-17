@@ -1,5 +1,4 @@
 
-
 const express = require("express");
 const router = express.Router();
 const { register } = require("../Controllers/userController");
@@ -9,6 +8,10 @@ const { updateUserStatus } = require("../Controllers/userController");
 const { logout } = require("../Controllers/userController");
 const { getUserStatusById } = require("../Controllers/userController");
 const { checkUsername } = require("../Controllers/userController");
+const { getUserProfile } = require("../Controllers/userController");
+const authMiddleware = require("../Middlewares/auth_middleware");
+const { updateUserProfile } = require("../Controllers/userController");
+const parser = require("../Middlewares/multer");
 router.post("/register", register);
 router.post("/login", login);
 router.get("/all-users", getAllUsers);
@@ -16,4 +19,6 @@ router.put("/update-user-status/:id", updateUserStatus);
 router.post("/logout/:id", logout);
 router.get("/user-status/:id", getUserStatusById);
 router.post("/check-username", checkUsername);
+router.get("/user-profile", authMiddleware, getUserProfile);
+router.put("/update-profile", authMiddleware,  parser.single('image'),updateUserProfile);
 module.exports = router;

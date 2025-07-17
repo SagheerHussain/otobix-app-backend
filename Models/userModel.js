@@ -33,6 +33,10 @@ const userschema = new mongoose.Schema({
             return this.userRole === 'Dealer';
         },
     },
+    image: {
+        type: String,
+        default: '',
+    },
     entityType: {
         type: String,
         required: function () {

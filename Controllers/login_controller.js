@@ -3,18 +3,18 @@ const jwt = require('jsonwebtoken');
 
 exports.login = async (req, res) => {
   try {
-    const { dealerName, contactNumber, password } = req.body;
+    const { userName, phoneNumber, password } = req.body;
 
-    if (!dealerName || !contactNumber || !password) {
+    if (!userName || !phoneNumber || !password) {
       return res.status(400).json({ message: 'Dealer name, contact number, and password are required' });
     }
 
-    const user = await User.findOne({ userName: dealerName }).select('+password');
+    const user = await User.findOne({ userName: userName }).select('+password');
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    if (user.phoneNumber !== contactNumber) {
+    if (user.phoneNumber !== phoneNumber) {
       return res.status(401).json({ message: 'Invalid contact number' });
     }
 
@@ -25,7 +25,7 @@ exports.login = async (req, res) => {
     const token = jwt.sign(
       {
         id: user._id,
-        dealerName: user.userName,
+        userName: user.userName,
         userType: user.userRole
       },
       process.env.JWT_SECRET,
@@ -37,10 +37,10 @@ exports.login = async (req, res) => {
       token,
       user: {
         id: user._id,
-        dealerName: user.userName,
+        userName: user.userName,
         userType: user.userRole,
         approvalStatus: user.approvalStatus,
-        contactNumber: user.phoneNumber
+        phoneNumber: user.phoneNumber
       }
     });
 

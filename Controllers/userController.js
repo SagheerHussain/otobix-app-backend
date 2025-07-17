@@ -30,14 +30,12 @@ exports.register = async (req, res) => {
         return res.status(400).json({ message: 'Invalid userRole provided.' });
       }
   
-      // 🔍 Check if email already exists
       const existingEmail = await User.findOne({ email });
       if (existingEmail) {
         return res.status(400).json({ message: 'Email already exists.' });
       }
   
-      // 🔍 Check if phone number already exists
-      const existingPhone = await User.findOne({ phoneNumber });
+     const existingPhone = await User.findOne({ phoneNumber });
       if (existingPhone) {
         return res.status(400).json({ message: 'Phone Number already exists.' });
       }
@@ -217,3 +215,171 @@ exports.checkUsername = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+
+exports.getUserProfile = async (req, res) => {
+    try {
+      const userId = req.user.id;
+  
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+  
+      let profile = {
+        role: user.userRole,
+        name: user.userName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        image: user.image,
+        location: user.location,
+      };
+  
+      switch (user.userRole) {
+        case 'Dealer':
+          profile = {
+            ...profile,
+            dealershipName: user.dealershipName,
+            entityType: user.entityType,
+            primaryContactPerson: user.primaryContactPerson,
+            primaryContactNumber: user.primaryContactNumber,
+            secondaryContactPerson: user.secondaryContactPerson,
+            secondaryContactNumber: user.secondaryContactNumber,
+            addressList: user.addressList,
+          };
+          break;
+  
+        case 'sales manager':
+        case 'customer':
+          profile = {
+            ...profile,
+            addressList: user.addressList,
+          };
+          break;
+  
+        case 'admin':
+          profile = {
+            ...profile,
+            permissions: 'Full Access',
+          };
+          break;
+  
+        default:
+          return res.status(400).json({ message: 'Invalid user role.' });
+      }
+  
+      res.status(200).json({
+        success: true,
+        message: 'User profile fetched successfully.',
+        profile,
+      });
+  
+    } catch (error) {
+      console.error('Get Profile Error:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
+    }
+  };
+  
+
+  exports.updateProfile = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { name, email, phoneNumber, location } = req.body;
+  
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+  
+      user.name = name;
+      user.email = email;
+      user.phoneNumber = phoneNumber;
+      user.location = location;
+  
+      await user.save();
+  
+      res.status(200).json({
+        success: true,
+        message: 'User profile updated successfully.',
+        user,
+      });
+  
+    } catch (error) {
+      console.error('Update Profile Error:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
+    }
+  };
+  exports.updateUserProfile = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+  
+      const {
+        userName,
+        email,
+        phoneNumber,
+        location,
+        dealershipName,
+        entityType,
+        primaryContactPerson,
+        primaryContactNumber,
+        secondaryContactPerson,
+        secondaryContactNumber,
+        addressList
+      } = req.body;
+  
+      user.userName = userName || user.userName;
+      user.email = email || user.email;
+      user.phoneNumber = phoneNumber || user.phoneNumber;
+      user.location = location || user.location;
+  
+      if (req.file) {
+        const imageUrl = req.file.path;
+        user.image = imageUrl;
+      }
+  
+      switch (user.userRole) {
+        case 'Dealer':
+          user.dealershipName = dealershipName || user.dealershipName;
+          user.entityType = entityType || user.entityType;
+          user.primaryContactPerson = primaryContactPerson || user.primaryContactPerson;
+          user.primaryContactNumber = primaryContactNumber || user.primaryContactNumber;
+          user.secondaryContactPerson = secondaryContactPerson || user.secondaryContactPerson;
+          user.secondaryContactNumber = secondaryContactNumber || user.secondaryContactNumber;
+          if (addressList && Array.isArray(addressList)) {
+            user.addressList = addressList;
+          }
+          break;
+  
+        case 'sales manager':
+        case 'customer':
+          if (addressList && Array.isArray(addressList)) {
+            user.addressList = addressList;
+          }
+          break;
+  
+        case 'admin':
+          // No extra fields for admin
+          break;
+  
+        default:
+          return res.status(400).json({ message: 'Invalid user role.' });
+      }
+  
+      await user.save();
+  
+      res.status(200).json({
+        success: true,
+        message: 'User profile updated successfully.',
+        user,
+      });
+  
+    } catch (error) {
+      console.error('Update Profile Error:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
+    }
+  };
+  
