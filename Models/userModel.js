@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
+const CONSTANTS = require('../Utils/constants');
 
 const userschema = new mongoose.Schema({
     userRole: {
         type: String,
-        enum: ['Dealer', 'customer', 'sales manager', 'admin'],
+        enum: [CONSTANTS.USER_ROLES.DEALER, CONSTANTS.USER_ROLES.CUSTOMER, CONSTANTS.USER_ROLES.SALES_MANAGER, CONSTANTS.USER_ROLES.ADMIN],
         required: true,
     },
     phoneNumber: {
@@ -30,7 +31,7 @@ const userschema = new mongoose.Schema({
     dealershipName: {
         type: String,
         required: function () {
-            return this.userRole === 'Dealer';
+            return this.userRole === CONSTANTS.USER_ROLES.DEALER;
         },
     },
     image: {
@@ -40,19 +41,19 @@ const userschema = new mongoose.Schema({
     entityType: {
         type: String,
         required: function () {
-            return this.userRole === 'Dealer';
+            return this.userRole === CONSTANTS.USER_ROLES.DEALER;
         },
     },
     primaryContactPerson: {
         type: String,
         required: function () {
-            return this.userRole === 'Dealer';
+            return this.userRole === CONSTANTS.USER_ROLES.DEALER;
         },
     },
     primaryContactNumber: {
         type: String,
         required: function () {
-            return this.userRole === 'Dealer';
+            return this.userRole === CONSTANTS.USER_ROLES.DEALER;
         },
     },
     secondaryContactPerson: {
@@ -76,8 +77,8 @@ const userschema = new mongoose.Schema({
     ],
     approvalStatus: {
         type: String,
-        enum: ['Pending', 'Approved', 'Rejected'],
-        default: 'Pending',
+        enum: [CONSTANTS.APPROVAL_STATUS.PENDING, CONSTANTS.APPROVAL_STATUS.APPROVED, CONSTANTS.APPROVAL_STATUS.REJECTED],
+        default: CONSTANTS.APPROVAL_STATUS.PENDING,
         required: true,
     },
     rejectionComment: {

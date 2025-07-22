@@ -1,5 +1,7 @@
 const User = require('../Models/userModel');
 const sendEmail = require('../Utils/node_mailer');
+const CONSTANTS = require('../Utils/constants');
+
 exports.register = async (req, res) => {
   try {
     const {
@@ -22,11 +24,11 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Please fill all required fields.' });
     }
 
-    if (userRole === 'Dealer') {
+    if (userRole === CONSTANTS.USER_ROLES.DEALER) {
       if (!dealershipName || !entityType || !primaryContactPerson || !primaryContactNumber) {
         return res.status(400).json({ message: 'Missing required Dealer fields.' });
       }
-    } else if (!['customer', 'sales manager', 'admin'].includes(userRole)) {
+    } else if (![CONSTANTS.USER_ROLES.CUSTOMER, CONSTANTS.USER_ROLES.SALES_MANAGER, CONSTANTS.USER_ROLES.ADMIN].includes(userRole)) {
       return res.status(400).json({ message: 'Invalid userRole provided.' });
     }
 
@@ -54,7 +56,7 @@ exports.register = async (req, res) => {
       secondaryContactNumber: secondaryContactNumber || '',
       password,
       addressList,
-      approvalStatus: 'Pending'
+      approvalStatus: CONSTANTS.APPROVAL_STATUS.PENDING
     });
 
     await user.save();
@@ -80,7 +82,7 @@ exports.register = async (req, res) => {
 exports.getAllUsersList = async (req, res) => {
   try {
     const users = await User.find({
-      userRole: { $ne: "admin" }, // ✅ Exclude users with userRole = "admin"
+      userRole: { $ne: CONSTANTS.USER_ROLES.ADMIN }, // ✅ Exclude users with userRole = "admin"
     });
 
     res.status(200).json({
@@ -103,8 +105,8 @@ exports.getAllUsersList = async (req, res) => {
 exports.getApprovedUsersList = async (req, res) => {
   try {
     const users = await User.find({
-      approvalStatus: "Approved",
-      userRole: { $ne: "admin" }, // ✅ Exclude users with userRole = "admin"
+      approvalStatus: CONSTANTS.APPROVAL_STATUS.APPROVED,
+      userRole: { $ne: CONSTANTS.USER_ROLES.ADMIN }, // ✅ Exclude users with userRole = "admin"
     });
 
     res.status(200).json({
@@ -125,7 +127,7 @@ exports.getApprovedUsersList = async (req, res) => {
 // Get Rejected Users List
 exports.getRejectedUsersList = async (req, res) => {
   try {
-    const users = await User.find({ approvalStatus: "Rejected" });
+    const users = await User.find({ approvalStatus: CONSTANTS.APPROVAL_STATUS.REJECTED });
 
     res.status(200).json({
       success: true,
@@ -145,7 +147,7 @@ exports.getRejectedUsersList = async (req, res) => {
 // Get Pending Users List
 exports.getPendingUsersList = async (req, res) => {
   try {
-    const users = await User.find({ approvalStatus: "Pending" });
+    const users = await User.find({ approvalStatus: CONSTANTS.APPROVAL_STATUS.PENDING });
 
     res.status(200).json({
       success: true,
@@ -163,12 +165,54 @@ exports.getPendingUsersList = async (req, res) => {
 };
 
 
+// Get Users Length
+exports.getUsersLength = async (req, res) => {
+  try {
+    const totalUsersLength = await User.countDocuments({
+      userRole: { $ne: CONSTANTS.USER_ROLES.ADMIN },
+    });
+
+    const approvedUsersLength = await User.countDocuments({
+      approvalStatus: CONSTANTS.APPROVAL_STATUS.APPROVED,
+      userRole: { $ne: CONSTANTS.USER_ROLES.ADMIN },
+    });
+
+    const rejectedUsersLength = await User.countDocuments({
+      approvalStatus: CONSTANTS.APPROVAL_STATUS.REJECTED,
+      userRole: { $ne: CONSTANTS.USER_ROLES.ADMIN },
+    });
+
+    const pendingUsersLength = await User.countDocuments({
+      approvalStatus: CONSTANTS.APPROVAL_STATUS.PENDING,
+      userRole: { $ne: CONSTANTS.USER_ROLES.ADMIN },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'User status counts fetched successfully.',
+      totalUsersLength,
+      approvedUsersLength,
+      rejectedUsersLength,
+      pendingUsersLength,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message,
+    });
+  }
+};
+
+
+
 exports.updateUserStatus = async (req, res) => {
   try {
     const userId = req.params.id;
     const { approvalStatus, comment } = req.body;
 
-    if (!['Approved', 'Rejected'].includes(approvalStatus)) {
+    if (![CONSTANTS.APPROVAL_STATUS.APPROVED, CONSTANTS.APPROVAL_STATUS.REJECTED].includes(approvalStatus)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid approval status. Must be Approved or Rejected.',
@@ -184,7 +228,7 @@ exports.updateUserStatus = async (req, res) => {
     }
 
     user.approvalStatus = approvalStatus;
-    user.rejectionComment = approvalStatus === 'Rejected' ? (comment || '') : '';
+    user.rejectionComment = approvalStatus === CONSTANTS.APPROVAL_STATUS.REJECTED ? (comment || '') : '';
 
     await user.save();
 
@@ -303,7 +347,7 @@ exports.getUserProfile = async (req, res) => {
     };
 
     switch (user.userRole) {
-      case 'Dealer':
+      case CONSTANTS.USER_ROLES.DEALER:
         profile = {
           ...profile,
           dealershipName: user.dealershipName,
@@ -316,15 +360,15 @@ exports.getUserProfile = async (req, res) => {
         };
         break;
 
-      case 'sales manager':
-      case 'customer':
+      case CONSTANTS.USER_ROLES.SALES_MANAGER:
+      case CONSTANTS.USER_ROLES.CUSTOMER:
         profile = {
           ...profile,
           addressList: user.addressList,
         };
         break;
 
-      case 'admin':
+      case CONSTANTS.USER_ROLES.ADMIN:
         profile = {
           ...profile,
           permissions: 'Full Access',
@@ -409,7 +453,7 @@ exports.updateUserProfile = async (req, res) => {
     }
 
     switch (user.userRole) {
-      case 'Dealer':
+      case CONSTANTS.USER_ROLES.DEALER:
         user.dealershipName = dealershipName || user.dealershipName;
         user.entityType = entityType || user.entityType;
         user.primaryContactPerson = primaryContactPerson || user.primaryContactPerson;
@@ -421,14 +465,14 @@ exports.updateUserProfile = async (req, res) => {
         }
         break;
 
-      case 'sales manager':
-      case 'customer':
+      case CONSTANTS.USER_ROLES.SALES_MANAGER:
+      case CONSTANTS.USER_ROLES.CUSTOMER:
         if (addressList && Array.isArray(addressList)) {
           user.addressList = addressList;
         }
         break;
 
-      case 'admin':
+      case CONSTANTS.USER_ROLES.ADMIN:
         // No extra fields for admin
         break;
 
