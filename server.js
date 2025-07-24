@@ -26,6 +26,15 @@ app.use('/api/otp', otpRoutes);
 const userRoutes = require("./Routes/userRoutes");
 app.use("/api/user", userRoutes);
 
+// Car Details Routes
+const carDetailsRoutes = require('./Routes/carDetailsRoutes');
+app.use('/api/car', carDetailsRoutes);
+
+// Import Appsheet Data To MongoDB
+const importAppsheetDataToMongoDB = require('./Controllers/import_appsheet_data_to_mongodb');
+app.use(express.json());
+app.use('/api', importAppsheetDataToMongoDB);
+
 app.get('/', (req, res) => {
     res.send('Otobix server is running');
 });
