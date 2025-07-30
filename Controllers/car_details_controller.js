@@ -35,29 +35,38 @@ exports.getCarList = async (req, res) => {
     try {
         const cars = await CarDetails.find({}, {
             _id: 1,
-            'Front Main': 1,
-            Make: 1,
-            Model: 1,
-            Variant: 1,
-            'Price Discovery': 1,
-            'Year Month of Manufacture': 1,
-            'Odometer Reading ( in kms )': 1,
-            'Fuel Type': 1,
-            City: 1,
-            'Approval Status': 1
+            frontMain: 1,
+            make: 1,
+            model: 1,
+            variant: 1,
+            priceDiscovery: 1,
+            yearMonthOfManufacture: 1,
+            odometerReadingInKms: 1,
+            fuelType: 1,
+            city: 1,
+            approvalStatus: 1
         });
 
-        const listings = cars.map(car => ({
-            id: car._id.toString(),
-            imageUrl: car['Front Main'] || '',
-            name: `${car.Make ?? ''} ${car.Model ?? ''} ${car.Variant ?? ''}`.trim(),
-            price: parseFloat(car['Price Discovery'] ?? 0),
-            year: new Date(car['Year Month of Manufacture']).getFullYear(),
-            kmDriven: parseInt(car['Odometer Reading ( in kms )'] ?? 0),
-            fuelType: car['Fuel Type'] ?? 'N/A',
-            location: car.City ?? 'N/A',
-            isInspected: (car['Approval Status'] ?? '').toUpperCase() === 'APPROVED'
-        }));
+        const listings = cars.map(car => {
+            // Safe conversion helpers
+            const imageUrl = Array.isArray(car.frontMain) ? car.frontMain[0] : (car.frontMain || '');
+            const price = parseFloat(car.priceDiscovery || 0);
+            const year = car.yearMonthOfManufacture ? new Date(car.yearMonthOfManufacture).getFullYear() : 'N/A';
+            const kmDriven = parseInt(car.odometerReadingInKms || 0);
+            const isInspected = (car.approvalStatus || '').toUpperCase() === 'APPROVED';
+
+            return {
+                id: car._id.toString(),
+                imageUrl,
+                name: `${car.make ?? ''} ${car.model ?? ''} ${car.variant ?? ''}`.trim(),
+                price,
+                year,
+                kmDriven,
+                fuelType: car.fuelType ?? 'N/A',
+                location: car.city ?? 'N/A',
+                isInspected
+            };
+        });
 
         res.json(listings);
     } catch (error) {

@@ -31,7 +31,7 @@ const carDetailsRoutes = require('./Routes/carDetailsRoutes');
 app.use('/api/car', carDetailsRoutes);
 
 // Import Appsheet Data To MongoDB
-const importAppsheetDataToMongoDB = require('./Controllers/import_appsheet_data_to_mongodb');
+const importAppsheetDataToMongoDB = require('./Config/Import Appsheet Data/import_appsheet_data_to_mongodb');
 app.use(express.json());
 app.use('/api', importAppsheetDataToMongoDB);
 

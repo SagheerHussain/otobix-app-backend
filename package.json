@@ -11,10 +11,12 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^1.10.0",
+    "camelcase": "^8.0.0",
     "cloudinary": "^1.41.3",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.0",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "googleapis": "^154.0.0",
     "i": "^0.3.7",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.17.0",
@@ -25,5 +27,14 @@
     "nodemon": "^3.1.10",
     "twilio": "^5.7.2",
     "xlsx": "^0.18.5"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SagheerHussain/otobix-app-backend.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/SagheerHussain/otobix-app-backend/issues"
+  },
+  "homepage": "https://github.com/SagheerHussain/otobix-app-backend#readme"
 }
