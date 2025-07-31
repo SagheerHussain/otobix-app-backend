@@ -21,15 +21,15 @@ exports.register = async (req, res) => {
     } = req.body;
 
     if (!userRole || !userName || !email || !phoneNumber || !location || !password || !addressList) {
-      return res.status(400).json({ message: 'Please fill all required fields.' });
+      return res.status(404).json({ message: 'Please fill all required fields.' });
     }
 
     if (userRole === CONSTANTS.USER_ROLES.DEALER) {
       if (!dealershipName || !entityType || !primaryContactPerson || !primaryContactNumber) {
-        return res.status(400).json({ message: 'Missing required Dealer fields.' });
+        return res.status(404).json({ message: 'Missing required Dealer fields.' });
       }
     } else if (![CONSTANTS.USER_ROLES.CUSTOMER, CONSTANTS.USER_ROLES.SALES_MANAGER, CONSTANTS.USER_ROLES.ADMIN].includes(userRole)) {
-      return res.status(400).json({ message: 'Invalid userRole provided.' });
+      return res.status(404).json({ message: 'Invalid userRole provided.' });
     }
 
     const existingEmail = await User.findOne({ email });
@@ -493,3 +493,45 @@ exports.updateUserProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+
+
+exports.updateUserThroughAdmin = async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const { password, approvalStatus } = req.body;
+
+    const updateFields = {};
+
+    if (password) {
+      updateFields.password = password;
+    }
+
+    if (approvalStatus) {
+      updateFields.approvalStatus = approvalStatus;
+    }
+
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({ message: 'No fields provided for update.' });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateFields, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    res.status(200).json({
+      message: 'User updated successfully.',
+      user: updatedUser,
+    });
+
+  } catch (error) {
+    console.error('Update error:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+};
+

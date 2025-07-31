@@ -10,6 +10,7 @@ const userschema = new mongoose.Schema({
     phoneNumber: {
         type: String,
         required: true,
+        unique: true,
     },
     location: {
         type: String,
@@ -24,7 +25,7 @@ const userschema = new mongoose.Schema({
         type: String,
         required: true,
         sparse: true,
-        // unique: true,
+        unique: true,
     },
 
     // Dealer-only fields
