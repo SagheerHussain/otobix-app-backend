@@ -44,7 +44,12 @@ exports.getCarList = async (req, res) => {
             odometerReadingInKms: 1,
             fuelType: 1,
             city: 1,
-            approvalStatus: 1
+            approvalStatus: 1,
+            rearMain: 1,
+            lhsFront45Degree: 1,
+            rhsRear45Degree: 1,
+            lhsFenderImages: 1,
+            rhsFenderImages: 1,
         });
 
         const listings = cars.map(car => {
@@ -55,6 +60,16 @@ exports.getCarList = async (req, res) => {
             const kmDriven = parseInt(car.odometerReadingInKms || 0);
             const isInspected = (car.approvalStatus || '').toUpperCase() === 'APPROVED';
 
+            const getFirst = (val) => Array.isArray(val) && val.length > 0 ? val[0] : null;
+            const imageUrls = [
+                getFirst(car.frontMain),
+                getFirst(car.rearMain),
+                getFirst(car.lhsFront45Degree),
+                getFirst(car.rhsRear45Degree),
+                getFirst(car.lhsFenderImages),
+                getFirst(car.rhsFenderImages)
+            ].filter(Boolean); // remove nulls
+
             return {
                 id: car._id.toString(),
                 imageUrl,
@@ -64,9 +79,11 @@ exports.getCarList = async (req, res) => {
                 kmDriven,
                 fuelType: car.fuelType ?? 'N/A',
                 location: car.city ?? 'N/A',
-                isInspected
+                isInspected,
+                imageUrls
             };
         });
+
 
         res.json(listings);
     } catch (error) {
