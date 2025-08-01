@@ -5,10 +5,13 @@ const XLSX = require('xlsx');
 const fs = require('fs');
 const CarModel = require('../../Models/carModel');
 const { google } = require('googleapis');
-
-
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
+const axios = require('axios');
+const cloudinary = require('../cloudinary');
+const googleDrive = require('../google_drive');
+const sharp = require('sharp');
+const fileType = require('file-type');
 
 router.post('/import-appsheet-data-to-mongodb', upload.single('file'), async (req, res) => {
     try {
@@ -62,16 +65,20 @@ router.post('/import-appsheet-data-to-mongodb', upload.single('file'), async (re
 
         fs.unlink(req.file.path, () => { }); // delete uploaded file
 
-        const resolvedData = await replaceFilePathsWithDriveUrls(mappedData);
+        const driveConvertedList = await replaceFilePathsWithDriveUrls(mappedData);
+
+        // ✅ HERE: Convert images from Google Drive URLs to Cloudinary URLs
+        const cloudinaryConvertedList = await convertImagesToCloudinary(driveConvertedList);
 
         // ✅ STORE IN MONGODB
-        const result = await CarModel.insertMany(resolvedData);;
+        const finalMongoDBUploadedList = await CarModel.insertMany(cloudinaryConvertedList);
+        console.log('Data import completed successfully');
 
 
         return res.status(200).json({
             message: 'File processed, typed stored in Mongodb successfully',
-            totalRecords: result.length,
-            data: result,
+            totalRecords: finalMongoDBUploadedList.length,
+            data: finalMongoDBUploadedList,
         });
     } catch (error) {
         console.error('❌ Error:', error);
@@ -155,6 +162,178 @@ async function replaceFilePathsWithDriveUrls(dataArray) {
 
     return updatedData;
 }
+/////////////////////////////////////////////////////////////////
+
+
+
+// Upload images to cloudinary and convert drive urls to cloudinary urls
+
+// Helper: Download file from Google Drive
+async function downloadFromDrive(url) {
+    const fileIdMatch = url.match(/id=([^&]+)/);
+    if (!fileIdMatch) throw new Error('Invalid Google Drive URL');
+    const fileId = fileIdMatch[1];
+    const res = await googleDrive.files.get(
+        { fileId, alt: 'media' },
+        { responseType: 'arraybuffer' }
+    );
+    return { buffer: Buffer.from(res.data, 'binary'), fileId };
+}
+
+// Helper: Check if buffer is an image
+async function isImage(buffer) {
+    const type = await fileType.fileTypeFromBuffer(buffer);
+    return type && type.mime.startsWith('image/');
+}
+
+
+// Helper: Compress image intelligently
+
+async function compressImage(buffer) {
+    const targetSize = 100 * 1024; // 100 KB
+    let quality = 80;
+    let width = 1000;
+    let compressedBuffer = buffer;
+
+    while (width >= 200) {
+        let currentQuality = quality;
+
+        while (currentQuality >= 30) {
+            compressedBuffer = await sharp(buffer)
+                .resize({ width, withoutEnlargement: true })
+                .jpeg({ quality: currentQuality })
+                .toBuffer();
+
+            if (compressedBuffer.byteLength <= targetSize) {
+                // console.log(`✅ Compressed to ${(compressedBuffer.byteLength / 1024).toFixed(1)} KB at ${width}px width & quality ${currentQuality}`);
+                return compressedBuffer;
+            }
+
+            currentQuality -= 10;
+        }
+
+        width -= 100;
+    }
+
+    console.warn(`⚠️ Could not compress below 100 KB. Final size: ${(compressedBuffer?.byteLength / 1024).toFixed(1)} KB`);
+    return compressedBuffer;
+}
+
+
+// Helper: Check if image is already uploaded
+async function checkIfAlreadyUploaded(publicId) {
+    try {
+        const result = await cloudinary.api.resource(publicId, {
+            resource_type: 'image',
+        });
+        return result.secure_url;
+    } catch (error) {
+        if (error.http_code === 404) {
+            return null; // Expected behavior if file not uploaded
+        } else {
+            // console.error(`Cloudinary API error for ${publicId}:`, error);
+            console.log(`Not Already uploaded: ${publicId}`);
+            return null;
+        }
+    }
+}
+
+// Upload image only if not already uploaded
+async function uploadImageWithCheck(buffer, folder, fileId) {
+    const publicId = `${folder}/${fileId}`;
+    const existingUrl = await checkIfAlreadyUploaded(publicId);
+    if (existingUrl) {
+        console.log(`Already uploaded: ${publicId}`);
+        return existingUrl;
+    }
+
+    const uploadResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+            { folder, public_id: fileId },
+            (error, result) => (error ? reject(error) : resolve(result))
+        );
+        stream.end(buffer);
+    });
+
+    return uploadResult.secure_url;
+}
+
+
+// Checks if a field is an array of Google Drive URLs
+function isGoogleDriveUrlArray(arr) {
+    return Array.isArray(arr) && arr.every(item => typeof item === 'string' && item.includes('drive.google.com'));
+}
+
+// Updated Main Conversion Function
+async function convertImagesToCloudinary(carList) {
+    const updatedCars = [];
+
+    for (const car of carList) {
+        const updatedCar = { ...car };
+        const appointmentId = car.appointmentId || 'Unknown';
+        const baseFolder = `Otobix/Otobix Images/${appointmentId}`;
+
+        for (const key in updatedCar) {
+            const fieldValue = updatedCar[key];
+
+            if (isGoogleDriveUrlArray(fieldValue)) {
+                const cloudinaryUrls = [];
+
+                for (const gdriveUrl of fieldValue) {
+                    try {
+                        const { buffer: fileBuffer, fileId } = await downloadFromDrive(gdriveUrl);
+
+                        if (!(await isImage(fileBuffer))) {
+                            console.log(`Skipped non-image file: ${gdriveUrl}`);
+                            cloudinaryUrls.push(gdriveUrl);
+                            continue;
+                        }
+
+                        const compressedBuffer = await compressImage(fileBuffer);
+
+                        const cloudinaryUrl = await uploadImageWithCheck(compressedBuffer, baseFolder, fileId);
+                        cloudinaryUrls.push(cloudinaryUrl);
+
+                    } catch (error) {
+                        console.error(`Error processing ${gdriveUrl}:`, error);
+                        cloudinaryUrls.push(gdriveUrl);
+                    }
+                }
+
+                updatedCar[key] = cloudinaryUrls;
+
+            } else if (typeof fieldValue === 'string' && fieldValue.includes('drive.google.com')) {
+                try {
+                    const { buffer: fileBuffer, fileId } = await downloadFromDrive(fieldValue);
+
+                    if (!(await isImage(fileBuffer))) {
+                        console.log(`Skipped non-image file: ${fieldValue}`);
+                        updatedCar[key] = fieldValue;
+                        continue;
+                    }
+
+                    const sizeMB = fileBuffer.byteLength / (1024 * 1024);
+                    const compressedBuffer = sizeMB > 10
+                        ? await compressImage(fileBuffer, 5)
+                        : await sharp(fileBuffer).jpeg({ quality: 75 }).toBuffer();
+
+                    const cloudinaryUrl = await uploadImageWithCheck(compressedBuffer, baseFolder, fileId);
+                    updatedCar[key] = cloudinaryUrl;
+
+                } catch (error) {
+                    console.error(`Error processing ${fieldValue}:`, error);
+                    updatedCar[key] = fieldValue;
+                }
+            }
+        }
+
+        updatedCars.push(updatedCar);
+    }
+
+    return updatedCars;
+}
+////////////////////////////////////////////////////////////////
+
 
 
 module.exports = router;

@@ -5,7 +5,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const os = require('os');
 
-const connectDB = require("./Config/db");
+const connectDB = require("./Config/mongo_db");
 connectDB();
 const app = express();
 
