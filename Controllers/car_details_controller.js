@@ -35,52 +35,101 @@ exports.getCarList = async (req, res) => {
     try {
         const cars = await CarDetails.find({}, {
             _id: 1,
-            frontMain: 1,
             make: 1,
             model: 1,
             variant: 1,
             priceDiscovery: 1,
             yearMonthOfManufacture: 1,
             odometerReadingInKms: 1,
+            ownerSerialNumber: 1,
             fuelType: 1,
+            commentsOnTransmission: 1,
+            taxValidTill: 1,
+            registrationNumber: 1,
+            registeredRto: 1,
             city: 1,
             approvalStatus: 1,
+            // Images
+            frontMain: 1,
             rearMain: 1,
             lhsFront45Degree: 1,
+            rearWithBootDoorOpen: 1,
             rhsRear45Degree: 1,
-            lhsFenderImages: 1,
-            rhsFenderImages: 1,
+            engineBay: 1,
+            meterConsoleWithEngineOn: 1,
+            frontSeatsFromDriverSideDoorOpen: 1,
+            rearSeatsFromRightSideDoorOpen: 1,
+            dashboardFromRearSeat: 1,
+            sunroofImages: 1
         });
 
         const listings = cars.map(car => {
+
+
+            // const getFirst = (val) => Array.isArray(val) && val.length > 0 ? val[0] : null;
+            // const imageUrls = [
+            //     getFirst(car.frontMain),
+            //     getFirst(car.rearMain),
+            //     getFirst(car.lhsFront45Degree),
+            //     getFirst(car.rhsRear45Degree),
+            //     getFirst(car.rearWithBootDoorOpen),
+            //     getFirst(car.engineBay),
+            //     getFirst(car.meterConsoleWithEngineOn),
+            //     getFirst(car.frontSeatsFromDriverSideDoorOpen),
+            //     getFirst(car.rearSeatsFromRightSideDoorOpen),
+            //     getFirst(car.dashboardFromRearSeat),
+            //     getFirst(car.sunroofImages)
+            // ].filter(Boolean); // remove nulls
+
+            const getFirstImage = (val) => {
+                if (Array.isArray(val)) return val.length > 0 ? val[0] : null;
+                if (typeof val === 'string') return val;
+                return null;
+            };
+
+
+            const imageMapping = [
+                { field: 'frontMain', title: 'Front View' },
+                { field: 'rearMain', title: 'Rear View' },
+                { field: 'lhsFront45Degree', title: 'Left Front 45°' },
+                { field: 'rhsRear45Degree', title: 'Right Rear 45°' },
+                { field: 'rearWithBootDoorOpen', title: 'Boot Open View' },
+                { field: 'engineBay', title: 'Engine Compartment' },
+                { field: 'meterConsoleWithEngineOn', title: 'Meter Console' },
+                { field: 'frontSeatsFromDriverSideDoorOpen', title: 'Front Seats' },
+                { field: 'rearSeatsFromRightSideDoorOpen', title: 'Rear Seats' },
+                { field: 'dashboardFromRearSeat', title: 'Dashboard View' },
+                { field: 'sunroofImages', title: 'Sunroof View' },
+            ];
+
+            const imageUrls = imageMapping.map(({ field, title }) => {
+                const url = getFirstImage(car[field]);
+                return url ? { title, url } : null;
+            }).filter(Boolean);
+
             // Safe conversion helpers
             const imageUrl = Array.isArray(car.frontMain) ? car.frontMain[0] : (car.frontMain || '');
-            const price = parseFloat(car.priceDiscovery || 0);
-            const year = car.yearMonthOfManufacture ? new Date(car.yearMonthOfManufacture).getFullYear() : 'N/A';
-            const kmDriven = parseInt(car.odometerReadingInKms || 0);
             const isInspected = (car.approvalStatus || '').toUpperCase() === 'APPROVED';
 
-            const getFirst = (val) => Array.isArray(val) && val.length > 0 ? val[0] : null;
-            const imageUrls = [
-                getFirst(car.frontMain),
-                getFirst(car.rearMain),
-                getFirst(car.lhsFront45Degree),
-                getFirst(car.rhsRear45Degree),
-                getFirst(car.lhsFenderImages),
-                getFirst(car.rhsFenderImages)
-            ].filter(Boolean); // remove nulls
-
             return {
-                id: car._id.toString(),
+                id: car._id.toString() ?? '',
                 imageUrl,
-                name: `${car.make ?? ''} ${car.model ?? ''} ${car.variant ?? ''}`.trim(),
-                price,
-                year,
-                kmDriven,
-                fuelType: car.fuelType ?? 'N/A',
-                location: car.city ?? 'N/A',
+                make: car.make ?? '',
+                model: car.model ?? '',
+                variant: car.variant ?? '',
+                priceDiscovery: parseFloat(car.priceDiscovery || 0),
+                yearMonthOfManufacture: car.yearMonthOfManufacture ?? null,
+                odometerReadingInKms: parseInt(car.odometerReadingInKms || 0),
+                ownerSerialNumber: parseInt(car.ownerSerialNumber || 0),
+                fuelType: car.fuelType ?? '',
+                commentsOnTransmission: car.commentsOnTransmission ?? '',
+                taxValidTill: car.taxValidTill ?? null,
+                registrationNumber: car.registrationNumber ?? '',
+                registeredRto: car.registeredRto ?? '',
+                inspectionLocation: car.city ?? '',
                 isInspected,
                 imageUrls
+
             };
         });
 
