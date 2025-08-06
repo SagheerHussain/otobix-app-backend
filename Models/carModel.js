@@ -649,6 +649,12 @@ const carSchema = new mongoose.Schema({
     // Taken from column: KM Range Level
     kmRangeLevel: { type: Number },
 
+    // Taken from column: Highest Bid
+    highestBid: {
+        type: Number,
+        default: 0
+    },
+
 
 });
 

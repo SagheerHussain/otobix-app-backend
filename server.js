@@ -4,10 +4,15 @@ require('dotenv').config();
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const os = require('os');
+const http = require('http'); // <--- required for WebSocket
 
 const connectDB = require("./Config/mongo_db");
 connectDB();
 const app = express();
+
+const server = http.createServer(app); // <--- HTTP server needed for socket
+const SocketService = require('./Config/socket_service'); // Import
+SocketService.initialize(server); // Initialize with HTTP server
 
 const PORT = process.env.PORT || 4000;
 
@@ -51,9 +56,18 @@ function getLocalIP() {
     return 'localhost';
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
     const localIP = getLocalIP();
     console.log(`Server listening at:`);
     console.log(`→ http://localhost:${PORT}`);
     console.log(`→ http://${localIP}:${PORT}  (use this on another PC)`);
+});
+
+
+
+
+// Only for testing in browser
+const path = require('path');
+app.get('/test', (req, res) => {
+    res.sendFile(path.join(__dirname, 'Controllers', 'dummy_browser_test.html'));
 });

@@ -1,35 +1,6 @@
-const CarDetails = require('../Models/carModel');
 const SocketService = require('../Config/socket_service');
-const EVENTS = require('../Sockets/socket_events');
+const CarDetails = require('../Models/carModel');
 
-
-// GET /api/car/:id
-exports.getCarDetails = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const carDetails = await CarDetails.findById(id);
-
-        if (!carDetails) {
-            return res.status(404).json({
-                success: false,
-                message: 'Car not found',
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            message: 'Car details fetched successfully.',
-            carDetails,
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error',
-            error: error.message,
-        });
-    }
-};
 
 
 
@@ -51,7 +22,6 @@ exports.getCarList = async (req, res) => {
             registeredRto: 1,
             city: 1,
             approvalStatus: 1,
-            highestBid: 1,
             // Images
             frontMain: 1,
             rearMain: 1,
@@ -69,20 +39,7 @@ exports.getCarList = async (req, res) => {
         const listings = cars.map(car => {
 
 
-            // const getFirst = (val) => Array.isArray(val) && val.length > 0 ? val[0] : null;
-            // const imageUrls = [
-            //     getFirst(car.frontMain),
-            //     getFirst(car.rearMain),
-            //     getFirst(car.lhsFront45Degree),
-            //     getFirst(car.rhsRear45Degree),
-            //     getFirst(car.rearWithBootDoorOpen),
-            //     getFirst(car.engineBay),
-            //     getFirst(car.meterConsoleWithEngineOn),
-            //     getFirst(car.frontSeatsFromDriverSideDoorOpen),
-            //     getFirst(car.rearSeatsFromRightSideDoorOpen),
-            //     getFirst(car.dashboardFromRearSeat),
-            //     getFirst(car.sunroofImages)
-            // ].filter(Boolean); // remove nulls
+
 
             const getFirstImage = (val) => {
                 if (Array.isArray(val)) return val.length > 0 ? val[0] : null;
@@ -131,7 +88,6 @@ exports.getCarList = async (req, res) => {
                 registeredRto: car.registeredRto ?? '',
                 inspectionLocation: car.city ?? '',
                 isInspected,
-                highestBid: car.highestBid ?? 0,
                 imageUrls
 
             };
@@ -146,7 +102,6 @@ exports.getCarList = async (req, res) => {
 };
 
 
-// Update bid
 exports.updateBid = async (req, res) => {
     try {
         const { carId, newBid } = req.body;
@@ -167,8 +122,8 @@ exports.updateBid = async (req, res) => {
         }
 
         // Emit to clients in that car room
-        SocketService.broadcast(EVENTS.BID_UPDATED, { carId, highestBid: newBid });
-        SocketService.emitToRoom(`car-${carId}`, EVENTS.BID_UPDATED, { carId, highestBid: newBid });
+        const SocketService = require('../Config/socket_service');
+        SocketService.broadcast('bid-updated', { carId, highestBid: newBid });
 
 
         return res.json({ success: true, highestBid: newBid });
