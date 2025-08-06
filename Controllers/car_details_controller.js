@@ -52,6 +52,8 @@ exports.getCarList = async (req, res) => {
             city: 1,
             approvalStatus: 1,
             highestBid: 1,
+            auctionStartTime: 1,
+            defaultAuctionTime: 1,
             // Images
             frontMain: 1,
             rearMain: 1,
@@ -132,6 +134,8 @@ exports.getCarList = async (req, res) => {
                 inspectionLocation: car.city ?? '',
                 isInspected,
                 highestBid: car.highestBid ?? 0,
+                auctionStartTime: car.auctionStartTime ?? null,
+                defaultAuctionTime: parseInt(car.defaultAuctionTime || 0),
                 imageUrls
 
             };

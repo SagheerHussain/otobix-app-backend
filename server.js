@@ -66,8 +66,8 @@ server.listen(PORT, '0.0.0.0', () => {
 
 
 
-// Only for testing in browser
-const path = require('path');
-app.get('/test', (req, res) => {
-    res.sendFile(path.join(__dirname, 'Controllers', 'dummy_browser_test.html'));
-});
+// // Only for testing in browser
+// const path = require('path');
+// app.get('/test', (req, res) => {
+//     res.sendFile(path.join(__dirname, 'Controllers', 'dummy_browser_test.html'));
+// });

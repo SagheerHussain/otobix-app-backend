@@ -649,10 +649,19 @@ const carSchema = new mongoose.Schema({
     // Taken from column: KM Range Level
     kmRangeLevel: { type: Number },
 
-    // Taken from column: Highest Bid
+
+    // Added by Muhammad Ahsan new fields
     highestBid: {
         type: Number,
         default: 0
+    },
+    auctionStartTime: {
+        type: Date,
+        default: new Date()
+    },
+    defaultAuctionTime: {
+        type: Number,
+        default: 12
     },
 
 
