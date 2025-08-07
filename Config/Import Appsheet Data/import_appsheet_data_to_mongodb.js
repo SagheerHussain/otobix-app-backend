@@ -187,8 +187,7 @@ async function isImage(buffer) {
 }
 
 
-// Helper: Compress image intelligently
-
+// Helper: Compress image 
 async function compressImage(buffer) {
     const targetSize = 100 * 1024; // 100 KB
     let quality = 80;

@@ -655,6 +655,10 @@ const carSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    highestBidder: {
+        type: String,
+        default: ''
+    },
     auctionStartTime: {
         type: Date,
         default: new Date()

@@ -1,6 +1,7 @@
 const CarDetails = require('../Models/carModel');
 const SocketService = require('../Config/socket_service');
 const EVENTS = require('../Sockets/socket_events');
+const BidModel = require('../Models/bidModel');
 
 
 // GET /api/car/:id
@@ -153,31 +154,119 @@ exports.getCarList = async (req, res) => {
 // Update bid
 exports.updateBid = async (req, res) => {
     try {
-        const { carId, newBid } = req.body;
+        const { carId, newBidAmount, userId } = req.body;
 
-        if (!carId || !newBid) {
-            return res.status(400).json({ error: 'carId and newBid are required' });
+        if (!carId || !newBidAmount || !userId) {
+            return res.status(400).json({ error: 'carId and newBid and userId are required' });
         }
 
-        // Update in MongoDB
-        const car = await CarDetails.findByIdAndUpdate(
-            carId,
-            { highestBid: newBid },
-            { new: true }
-        );
-
-        if (!car) {
+        //  Fetch car to validate bid
+        const carDetailsForValidation = await CarDetails.findById(carId);
+        if (!carDetailsForValidation) {
             return res.status(404).json({ error: 'Car not found' });
         }
 
-        // Emit to clients in that car room
-        SocketService.broadcast(EVENTS.BID_UPDATED, { carId, highestBid: newBid });
-        SocketService.emitToRoom(`car-${carId}`, EVENTS.BID_UPDATED, { carId, highestBid: newBid });
+        //  Prevent lower or same bid
+        if (newBidAmount <= carDetailsForValidation.highestBid) {
+            return res.status(403).json({ error: 'Bid must be higher than current highest bid.' });
+        }
+
+        // Store bid in bids collection
+        const bid = new BidModel({
+            carId,
+            userId,
+            bidAmount: newBidAmount,
+            time: new Date()
+        });
+        await bid.save();
+
+        // Update highestBid and highestBidder in car document
+        const carDetailsToUpdateCarDocument = await CarDetails.findByIdAndUpdate(
+            carId,
+            {
+                highestBid: newBidAmount,
+                highestBidder: userId
+            },
+            { new: true }
+        );
+
+        if (!carDetailsToUpdateCarDocument) {
+            return res.status(404).json({ error: 'Car not found' });
+        }
+
+        // Emit bid update to clients all and car details room
+        SocketService.broadcast(EVENTS.BID_UPDATED, { carId, highestBid: newBidAmount, userId });
+        SocketService.emitToRoom(`car-${carId}`, EVENTS.BID_UPDATED, { carId, highestBid: newBidAmount, userId });
 
 
-        return res.json({ success: true, highestBid: newBid });
+        return res.json({ success: true, highestBid: newBidAmount });
     } catch (error) {
         console.error('Error updating bid:', error);
         res.status(500).json({ error: 'Failed to update bid' });
+    }
+};
+
+exports.updateAuctionTime = async (req, res) => {
+    try {
+        const { carId, auctionStartTime, defaultAuctionTime } = req.body;
+
+        if (!carId) {
+            return res.status(400).json({ error: 'carId is required' });
+        }
+
+        const updateData = {};
+        if (auctionStartTime) {
+            updateData.auctionStartTime = new Date(auctionStartTime);
+        }
+        if (defaultAuctionTime !== undefined) {
+            updateData.defaultAuctionTime = defaultAuctionTime;
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ error: 'No fields to update' });
+        }
+
+        const updatedCar = await CarDetails.findByIdAndUpdate(
+            carId,
+            updateData,
+            { new: true }
+        );
+
+        if (!updatedCar) {
+            return res.status(404).json({ error: 'Car not found' });
+        }
+
+        res.json({ success: true, data: updatedCar });
+    } catch (error) {
+        console.error('Update error:', error);
+        res.status(500).json({ error: 'Failed to update car fields' });
+    }
+};
+
+
+exports.checkHighestBidder = async (req, res) => {
+    try {
+        const { carId, userId } = req.body;
+
+        // Validate input
+        if (!carId || !userId) {
+            return res.status(400).json({ error: 'carId and userId are required' });
+        }
+
+        // Get the highest bid for the car
+        const highestBid = await BidModel.findOne({ carId })
+            .sort({ bidAmount: -1, time: 1 }) // Highest first, then oldest if tie
+            .limit(1);
+
+        if (!highestBid) {
+            return res.json({ isHighestBidder: false });
+        }
+
+        const isHighestBidder = highestBid.userId === userId;
+
+        return res.json({ isHighestBidder });
+    } catch (err) {
+        console.error('Error in checkHighestBidder:', err);
+        res.status(500).json({ error: 'Server error' });
     }
 };
