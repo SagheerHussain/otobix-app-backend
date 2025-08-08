@@ -40,6 +40,10 @@ const importAppsheetDataToMongoDB = require('./Config/Import Appsheet Data/impor
 app.use(express.json());
 app.use('/api', importAppsheetDataToMongoDB);
 
+// Import the ping route
+const pingRoutes = require('./Extra Files/extra_files_routes'); // adjust if path differs
+app.use('/api', pingRoutes);
+
 app.get('/', (req, res) => {
     res.send('Otobix server is running');
 });
@@ -63,9 +67,16 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`→ http://${localIP}:${PORT}  (use this on another PC)`);
 
     // For keeping render awake
-    const SelfPing = require('./Extra Files/self_ping');
-    const selfPing = new SelfPing('https://otobix-app-backend.onrender.com/ping');
-    selfPing.start();
+    // ✅ Auto ping to keep Render awake
+    const axios = require('axios');
+    setInterval(async () => {
+        try {
+            await axios.get('https://otobix-app-backend.onrender.com/api/ping');
+            console.log(`[AutoPing] Successful at ${new Date().toISOString()}`);
+        } catch (err) {
+            console.error('[AutoPing] Failed:', err.message);
+        }
+    }, 60 * 1000); // 1 minute
     ///////////////////////////
 });
 
