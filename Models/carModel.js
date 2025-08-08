@@ -663,9 +663,17 @@ const carSchema = new mongoose.Schema({
         type: Date,
         default: new Date()
     },
-    defaultAuctionTime: {
+    auctionDuration: {
         type: Number,
         default: 12
+    },
+    auctionEndTime: {
+        type: Date,
+        default: new Date()
+    },
+    auctionStatus: {
+        type: String,
+        default: 'pending'
     },
 
 

@@ -61,7 +61,17 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening at:`);
     console.log(`→ http://localhost:${PORT}`);
     console.log(`→ http://${localIP}:${PORT}  (use this on another PC)`);
+
+    // For keeping render awake
+    const SelfPing = require('./Extra Files/self_ping');
+    const selfPing = new SelfPing('https://otobix-app-backend.onrender.com/ping');
+    selfPing.start();
+    ///////////////////////////
 });
+
+const dummyController = require('./Controllers/dummy');
+app.get('/api/dummy', dummyController.dummyFunctionForNow);
+
 
 
 

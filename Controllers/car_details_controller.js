@@ -54,7 +54,8 @@ exports.getCarList = async (req, res) => {
             approvalStatus: 1,
             highestBid: 1,
             auctionStartTime: 1,
-            defaultAuctionTime: 1,
+            auctionEndTime: 1,
+            auctionDuration: 1,
             // Images
             frontMain: 1,
             rearMain: 1,
@@ -136,7 +137,8 @@ exports.getCarList = async (req, res) => {
                 isInspected,
                 highestBid: car.highestBid ?? 0,
                 auctionStartTime: car.auctionStartTime ?? null,
-                defaultAuctionTime: parseInt(car.defaultAuctionTime || 0),
+                auctionEndTime: car.auctionEndTime ?? null,
+                auctionDuration: parseInt(car.auctionDuration || 0),
                 imageUrls
 
             };
@@ -206,20 +208,43 @@ exports.updateBid = async (req, res) => {
     }
 };
 
+// Update auction time
 exports.updateAuctionTime = async (req, res) => {
     try {
-        const { carId, auctionStartTime, defaultAuctionTime } = req.body;
+        const { carId, auctionStartTime, auctionDuration } = req.body;
 
         if (!carId) {
             return res.status(400).json({ error: 'carId is required' });
         }
 
         const updateData = {};
+        let startTimeToUse = null;
+
+        // Set auctionStartTime if provided
         if (auctionStartTime) {
-            updateData.auctionStartTime = new Date(auctionStartTime);
+            const parsedStart = new Date(auctionStartTime);
+            updateData.auctionStartTime = parsedStart;
+            startTimeToUse = parsedStart;
         }
-        if (defaultAuctionTime !== undefined) {
-            updateData.defaultAuctionTime = defaultAuctionTime;
+
+        // Set auctionDuration if provided
+        if (auctionDuration !== undefined) {
+            updateData.auctionDuration = auctionDuration;
+        }
+
+        // If either startTime or duration is being updated, calculate auctionEndTime
+        if ((auctionStartTime || auctionDuration !== undefined)) {
+            // Get current car data to fill missing value if one is not provided
+            const car = await CarDetails.findById(carId);
+            if (!car) return res.status(404).json({ error: 'Car not found' });
+
+            const finalStartTime = startTimeToUse || car.auctionStartTime;
+            const finalDuration = auctionDuration !== undefined ? auctionDuration : car.auctionDuration;
+
+            if (finalStartTime && finalDuration !== undefined) {
+                const endTime = new Date(new Date(finalStartTime).getTime() + finalDuration * 3600000);
+                updateData.auctionEndTime = endTime;
+            }
         }
 
         if (Object.keys(updateData).length === 0) {
@@ -244,6 +269,7 @@ exports.updateAuctionTime = async (req, res) => {
 };
 
 
+// Check highest bidder
 exports.checkHighestBidder = async (req, res) => {
     try {
         const { carId, userId } = req.body;
