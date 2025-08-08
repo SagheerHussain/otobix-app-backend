@@ -5,6 +5,8 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const os = require('os');
 const http = require('http'); // <--- required for WebSocket
+const agenda = require('./Config/agenda'); // Ensure agenda starts on boot
+
 
 const connectDB = require("./Config/mongo_db");
 connectDB();
@@ -76,7 +78,8 @@ server.listen(PORT, '0.0.0.0', () => {
         } catch (err) {
             console.error('[AutoPing] Failed:', err.message);
         }
-    }, 60 * 1000); // 1 minute
+        // }, 60 * 1000); // 1 minute
+    }, 10 * 60 * 1000); // 10 minutes
     ///////////////////////////
 });
 
@@ -87,8 +90,8 @@ app.get('/api/dummy', dummyController.dummyFunctionForNow);
 
 
 
-// // Only for testing in browser
-// const path = require('path');
-// app.get('/test', (req, res) => {
-//     res.sendFile(path.join(__dirname, 'Controllers', 'dummy_browser_test.html'));
-// });
+// Only for testing in browser
+const path = require('path');
+app.get('/test', (req, res) => {
+    res.sendFile(path.join(__dirname, 'Controllers', 'dummy_browser_test.html'));
+});

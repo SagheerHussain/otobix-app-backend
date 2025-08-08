@@ -7,7 +7,3 @@ router.get('/ping', ping); // 👈 lightweight GET endpoint for Render
 module.exports = router;
 
 
-
-// app.get('/ping', (req, res) => {
-//     res.send('pong');
-// });

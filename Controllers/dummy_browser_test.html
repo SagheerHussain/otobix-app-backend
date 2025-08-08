@@ -28,6 +28,11 @@
             log(`📢 New bid: ${data.highestBid} on car ${data.carId}`);
         });
 
+        socket.on('auctionWon', (data) => {
+            console.log("🎉 Auction Won:", data);
+            log(`🎉 Auction won for car ${data.carId} by ${data.winnerId}`);
+        });
+
         function log(msg) {
             const li = document.createElement('li');
             li.innerText = msg;

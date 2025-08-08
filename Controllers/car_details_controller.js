@@ -261,6 +261,12 @@ exports.updateAuctionTime = async (req, res) => {
             return res.status(404).json({ error: 'Car not found' });
         }
 
+
+        // ✅ Just one line to schedule
+        const AgendaJobs = require('../Config/agenda_jobs');
+        await AgendaJobs.scheduleAuctionEnd(updatedCar._id.toString(), updatedCar.auctionEndTime);
+
+
         res.json({ success: true, data: updatedCar });
     } catch (error) {
         console.error('Update error:', error);
