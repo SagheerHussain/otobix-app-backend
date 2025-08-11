@@ -1,6 +1,9 @@
 // utils/agendaJobs.js
 const Car = require('../Models/carModel');
+const User = require('../Models/userModel');
+const BidModel = require('../Models/bidModel');
 const socketService = require('../Config/socket_service');
+const CONSTANTS = require('../Utils/constants');
 const EVENTS = require('../Sockets/socket_events');
 let agendaInstance = null;
 
@@ -13,18 +16,32 @@ const defineJobs = (agenda) => {
         // console.log(`[Agenda Job] Running 'end auction' for car ${carId}`);
 
         try {
-            const car = await Car.findById(carId);
+            // Find car details
+            const car = await Car.findById(carId).lean();
+            // Find Winner details
+            const winner = await User.findById(car.highestBidder).select('userName').lean();
+            const winnerName = winner?.userName ?? '';
+
+            // Find bidders list
+            const biddersList = await BidModel.distinct('userId', { carId });
+
+            // Emit auction ended event
             socketService.broadcast(EVENTS.AUCTION_ENDED, {
                 carId: car._id.toString(),
+                carName: `${car.make ?? ''} ${car.model ?? ''} ${car.variant ?? ''}`.trim(),
                 bidAmount: car.highestBid,
                 winnerId: car.highestBidder,
+                winnerName,
+                biddersList,
                 message: '🎉 Auction ended. Winner declared!',
             });
 
+            // Update auction status (use the actual constant you defined)
+            await Car.updateOne(
+                { _id: car._id },
+                { $set: { auctionStatus: CONSTANTS.AUCTION_STATUS.ENDED } }
+            );
 
-
-            car.auctionStatus = 'ended';
-            await car.save();
             console.log(`[Agenda Job] Auction ended for car ${carId}`);
         } catch (err) {
             console.error(`[Agenda Job] Error for car ${carId}:`, err.message);

@@ -1,5 +1,6 @@
 const CarDetails = require('../Models/carModel');
 const SocketService = require('../Config/socket_service');
+const CONSTANTS = require('../Utils/constants');
 const EVENTS = require('../Sockets/socket_events');
 const BidModel = require('../Models/bidModel');
 
@@ -56,6 +57,7 @@ exports.getCarList = async (req, res) => {
             auctionStartTime: 1,
             auctionEndTime: 1,
             auctionDuration: 1,
+            auctionStatus: 1,
             // Images
             frontMain: 1,
             rearMain: 1,
@@ -139,6 +141,7 @@ exports.getCarList = async (req, res) => {
                 auctionStartTime: car.auctionStartTime ?? null,
                 auctionEndTime: car.auctionEndTime ?? null,
                 auctionDuration: parseInt(car.auctionDuration || 0),
+                auctionStatus: car.auctionStatus ?? '',
                 imageUrls
 
             };

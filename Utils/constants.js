@@ -13,6 +13,12 @@ module.exports = {
         SALES_MANAGER: 'Sales Manager',
     },
 
+    // Auction Statuses
+    AUCTION_STATUS: {
+        LIVE: 'live',
+        ENDED: 'ended',
+    },
+
     // Approval Statuses
     APPROVAL_STATUS: {
         APPROVED: 'Approved',
