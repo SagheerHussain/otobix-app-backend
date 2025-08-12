@@ -37,6 +37,10 @@ app.use("/api/user", userRoutes);
 const carDetailsRoutes = require('./Routes/carDetailsRoutes');
 app.use('/api/car', carDetailsRoutes);
 
+// User Notifications Routes
+const userNotificationsRoutes = require('./Routes/userNotificationsRoutes');
+app.use('/api/user/notifications', userNotificationsRoutes);
+
 // Import Appsheet Data To MongoDB
 const importAppsheetDataToMongoDB = require('./Config/Import Appsheet Data/import_appsheet_data_to_mongodb');
 app.use(express.json());

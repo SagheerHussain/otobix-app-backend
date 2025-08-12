@@ -16,6 +16,9 @@ const { getUserProfile } = require("../Controllers/userController");
 const authMiddleware = require("../Middlewares/auth_middleware");
 const { updateUserProfile } = require("../Controllers/userController");
 const { updateUserThroughAdmin } = require("../Controllers/userController");
+
+const { addToWishlist } = require("../Controllers/user_wishlist_controller");
+
 const parser = require("../Middlewares/multer");
 router.post("/register", register);
 router.post("/login", login);
@@ -31,4 +34,5 @@ router.post("/check-username", checkUsername);
 router.get("/user-profile", authMiddleware, getUserProfile);
 router.put("/update-profile", authMiddleware, parser.single('image'), updateUserProfile);
 router.put("/update-user-through-admin", updateUserThroughAdmin);
+router.post("/add-to-wishlist", addToWishlist);
 module.exports = router;

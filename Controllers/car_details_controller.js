@@ -1,15 +1,16 @@
-const CarDetails = require('../Models/carModel');
+const CarModel = require('../Models/carModel');
 const SocketService = require('../Config/socket_service');
 const CONSTANTS = require('../Utils/constants');
 const EVENTS = require('../Sockets/socket_events');
 const BidModel = require('../Models/bidModel');
-
+const AutoBidModelForLiveSection = require('../Models/autoBidModelForLiveSection');
+const AuctionController = require('../Controllers/auction_controller');
 
 // GET /api/car/:id
 exports.getCarDetails = async (req, res) => {
     try {
         const { id } = req.params;
-        const carDetails = await CarDetails.findById(id);
+        const carDetails = await CarModel.findById(id);
 
         if (!carDetails) {
             return res.status(404).json({
@@ -37,7 +38,7 @@ exports.getCarDetails = async (req, res) => {
 
 exports.getCarList = async (req, res) => {
     try {
-        const cars = await CarDetails.find({}, {
+        const cars = await CarModel.find({}, {
             _id: 1,
             make: 1,
             model: 1,
@@ -156,60 +157,60 @@ exports.getCarList = async (req, res) => {
 };
 
 
-// Update bid
-exports.updateBid = async (req, res) => {
-    try {
-        const { carId, newBidAmount, userId } = req.body;
+// // Update bid
+// exports.updateBid = async (req, res) => {
+//     try {
+//         const { carId, newBidAmount, userId } = req.body;
 
-        if (!carId || !newBidAmount || !userId) {
-            return res.status(400).json({ error: 'carId and newBid and userId are required' });
-        }
+//         if (!carId || !newBidAmount || !userId) {
+//             return res.status(400).json({ error: 'carId and newBid and userId are required' });
+//         }
 
-        //  Fetch car to validate bid
-        const carDetailsForValidation = await CarDetails.findById(carId);
-        if (!carDetailsForValidation) {
-            return res.status(404).json({ error: 'Car not found' });
-        }
+//         //  Fetch car to validate bid
+//         const carDetailsForValidation = await CarModel.findById(carId);
+//         if (!carDetailsForValidation) {
+//             return res.status(404).json({ error: 'Car not found' });
+//         }
 
-        //  Prevent lower or same bid
-        if (newBidAmount <= carDetailsForValidation.highestBid) {
-            return res.status(403).json({ error: 'Bid must be higher than current highest bid.' });
-        }
+//         //  Prevent lower or same bid
+//         if (newBidAmount <= carDetailsForValidation.highestBid) {
+//             return res.status(403).json({ error: 'Bid must be higher than current highest bid.' });
+//         }
 
-        // Store bid in bids collection
-        const bid = new BidModel({
-            carId,
-            userId,
-            bidAmount: newBidAmount,
-            time: new Date()
-        });
-        await bid.save();
+//         // Store bid in bids collection
+//         const bid = new BidModel({
+//             carId,
+//             userId,
+//             bidAmount: newBidAmount,
+//             time: new Date()
+//         });
+//         await bid.save();
 
-        // Update highestBid and highestBidder in car document
-        const carDetailsToUpdateCarDocument = await CarDetails.findByIdAndUpdate(
-            carId,
-            {
-                highestBid: newBidAmount,
-                highestBidder: userId
-            },
-            { new: true }
-        );
+//         // Update highestBid and highestBidder in car document
+//         const carDetailsToUpdateCarDocument = await CarModel.findByIdAndUpdate(
+//             carId,
+//             {
+//                 highestBid: newBidAmount,
+//                 highestBidder: userId
+//             },
+//             { new: true }
+//         );
 
-        if (!carDetailsToUpdateCarDocument) {
-            return res.status(404).json({ error: 'Car not found' });
-        }
+//         if (!carDetailsToUpdateCarDocument) {
+//             return res.status(404).json({ error: 'Car not found' });
+//         }
 
-        // Emit bid update to clients all and car details room
-        SocketService.broadcast(EVENTS.BID_UPDATED, { carId, highestBid: newBidAmount, userId });
-        SocketService.emitToRoom(`car-${carId}`, EVENTS.BID_UPDATED, { carId, highestBid: newBidAmount, userId });
+//         // Emit bid update to clients all and car details room
+//         SocketService.broadcast(EVENTS.BID_UPDATED, { carId, highestBid: newBidAmount, userId });
+//         SocketService.emitToRoom(`car-${carId}`, EVENTS.BID_UPDATED, { carId, highestBid: newBidAmount, userId });
 
 
-        return res.json({ success: true, highestBid: newBidAmount });
-    } catch (error) {
-        console.error('Error updating bid:', error);
-        res.status(500).json({ error: 'Failed to update bid' });
-    }
-};
+//         return res.json({ success: true, highestBid: newBidAmount });
+//     } catch (error) {
+//         console.error('Error updating bid:', error);
+//         res.status(500).json({ error: 'Failed to update bid' });
+//     }
+// };
 
 // Update auction time
 exports.updateAuctionTime = async (req, res) => {
@@ -238,7 +239,7 @@ exports.updateAuctionTime = async (req, res) => {
         // If either startTime or duration is being updated, calculate auctionEndTime
         if ((auctionStartTime || auctionDuration !== undefined)) {
             // Get current car data to fill missing value if one is not provided
-            const car = await CarDetails.findById(carId);
+            const car = await CarModel.findById(carId);
             if (!car) return res.status(404).json({ error: 'Car not found' });
 
             const finalStartTime = startTimeToUse || car.auctionStartTime;
@@ -254,7 +255,7 @@ exports.updateAuctionTime = async (req, res) => {
             return res.status(400).json({ error: 'No fields to update' });
         }
 
-        const updatedCar = await CarDetails.findByIdAndUpdate(
+        const updatedCar = await CarModel.findByIdAndUpdate(
             carId,
             updateData,
             { new: true }
@@ -305,3 +306,7 @@ exports.checkHighestBidder = async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 };
+
+// ---- THIN DELEGATORS (keep your current endpoints unchanged) ----
+exports.updateBid = (req, res) => AuctionController.updateBid(req, res);
+exports.submitAutoBidForLiveSection = (req, res) => AuctionController.submitAutoBidForLiveSection(req, res);

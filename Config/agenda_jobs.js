@@ -5,6 +5,8 @@ const BidModel = require('../Models/bidModel');
 const socketService = require('../Config/socket_service');
 const CONSTANTS = require('../Utils/constants');
 const EVENTS = require('../Sockets/socket_events');
+const { deactivateAutoBidsForCar } = require('../Controllers/auction_controller');
+const NotificationsModel = require('../Models/userNotificationsModel');
 let agendaInstance = null;
 
 const defineJobs = (agenda) => {
@@ -36,11 +38,21 @@ const defineJobs = (agenda) => {
                 message: '🎉 Auction ended. Winner declared!',
             });
 
+            // 👉 Create notifications (winner + losers)
+            try {
+                await createAuctionEndNotifications(car, biddersList);
+            } catch (e) {
+                console.warn('createAuctionEndNotifications failed:', e.message);
+            }
+
             // Update auction status (use the actual constant you defined)
-            await Car.updateOne(
-                { _id: car._id },
-                { $set: { auctionStatus: CONSTANTS.AUCTION_STATUS.ENDED } }
-            );
+            // await Car.updateOne(
+            //     { _id: car._id },
+            //     { $set: { auctionStatus: CONSTANTS.AUCTION_STATUS.ENDED } }
+            // );
+
+            // deactivate autobids
+            await deactivateAutoBidsForCar(carId);
 
             console.log(`[Agenda Job] Auction ended for car ${carId}`);
         } catch (err) {
@@ -62,3 +74,64 @@ module.exports = {
     defineJobs,
     scheduleAuctionEnd,
 };
+
+
+
+
+/** ---------- helper: create winner/loser notifications ---------- */
+async function createAuctionEndNotifications(car, biddersList) {
+    if (!car) return;
+    const carId = car._id?.toString();
+    const carName = `${car.make ?? ''} ${car.model ?? ''} ${car.variant ?? ''}`.trim();
+    const winnerId = car.highestBidder ? car.highestBidder.toString() : null;
+
+    // unique losers (all bidders except winner)
+    const uniqueBidders = [...new Set((biddersList || []).map(id => id?.toString()).filter(Boolean))];
+    const losers = winnerId ? uniqueBidders.filter(uid => uid !== winnerId) : uniqueBidders;
+
+    const amount = Number(car.highestBid || 0);
+    const formatted = amount.toLocaleString('en-IN');
+    const now = new Date();
+
+    const docs = [];
+    if (winnerId) {
+        docs.push({
+            userId: winnerId,
+            type: 'bid_won',
+            title: 'You won the auction 🎉',
+            body: `You won ${carName} for ₹${formatted}.`,
+            isRead: false,
+            createdAt: now,
+            data: { carId, carName, highestBid: amount, winnerId }, // keep/remove 'data' based on your schema
+        });
+    }
+    for (const uid of losers) {
+        docs.push({
+            userId: uid,
+            type: 'bid_lost',
+            title: 'Auction ended',
+            body: `You didn’t win ${carName}. Winning bid: ₹${formatted}.`,
+            isRead: false,
+            createdAt: now,
+            data: { carId, carName, highestBid: amount, winnerId },
+        });
+    }
+
+    if (!docs.length) return;
+
+    await NotificationsModel.insertMany(docs, { ordered: false });
+
+    // Optional realtime push (only if you have these events/rooms wired)
+    // const created = await NotificationsModel.insertMany(docs, { ordered: false });
+
+    // try {
+    //     if (EVENTS?.NOTIFICATION_CREATED) {
+    //         for (const n of created) {
+    //             socketService.emitToRoom(`user-${n.userId}`, EVENTS.NOTIFICATION_CREATED, { notification: n });
+    //         }
+    //     }
+    // } catch (e) {
+    //     console.warn('[AgendaJobs] Socket push for notifications failed:', e.message);
+    // }
+}
+/** ---------------------------------------------------------------- */

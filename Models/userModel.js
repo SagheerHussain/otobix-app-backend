@@ -85,7 +85,11 @@ const userschema = new mongoose.Schema({
     rejectionComment: {
         type: String,
         default: '',
-    }
+    },
+    wishlist: {
+        type: [String],
+        default: [],
+    },
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userschema);
