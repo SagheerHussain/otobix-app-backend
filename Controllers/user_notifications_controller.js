@@ -1,6 +1,7 @@
 // controllers/notificationsController.js
 const NotificationsModel = require('../Models/userNotificationsModel');
-
+const EVENTS = require('../Sockets/socket_events');
+const socketService = require('../Config/socket_service');
 // Create notification
 exports.createNotification = async (req, res) => {
     try {
@@ -8,6 +9,33 @@ exports.createNotification = async (req, res) => {
         if (!userId || !title || !body) return res.status(400).json({ error: 'userId, title, body are required' });
 
         const doc = await NotificationsModel.create({ userId, title, body, type, data });
+
+        // Get unread notifications count
+        const unreadNotificationsCount = await NotificationsModel.countDocuments({
+            userId,
+            isRead: false
+        });
+
+        // 🔊 Emit to that user notifications room
+        socketService.emitToRoom(
+            EVENTS.USER_NOTIFICATIONS_ROOM + userId,
+            EVENTS.USER_NOTIFICATION_CREATED,
+            {
+                // keep payload small but useful
+                item: {
+                    _id: doc._id,
+                    userId: doc.userId,
+                    title: doc.title,
+                    body: doc.body,
+                    type: doc.type,
+                    data: doc.data,
+                    isRead: doc.isRead,
+                    createdAt: doc.createdAt
+                },
+                unreadNotificationsCount
+            }
+        );
+
         res.json({ success: true, id: doc._id });
     } catch (e) {
         console.error('createNotification', e);
@@ -46,7 +74,6 @@ exports.notificationDetails = async (req, res) => {
 
         const doc = await NotificationsModel.findOne({ _id: notificationId, userId }).lean();
         if (!doc) return res.status(404).json({ error: 'Not found' });
-        console.log(doc);
         res.json({ success: true, item: doc });
     } catch (e) {
         console.error('notificationFullDetails', e);
@@ -61,6 +88,23 @@ exports.markNotificationAsRead = async (req, res) => {
         if (!userId || !notificationId) return res.status(400).json({ error: 'userId and notificationId are required' });
 
         await NotificationsModel.updateOne({ _id: notificationId, userId }, { $set: { isRead: true } });
+
+        // Get unread notifications count
+        const unreadNotificationsCount = await NotificationsModel.countDocuments({
+            userId,
+            isRead: false
+        });
+
+        // 🔊 Emit to that user notifications room
+        socketService.emitToRoom(
+            EVENTS.USER_NOTIFICATIONS_ROOM + userId,
+            EVENTS.USER_NOTIFICATION_MARKED_AS_READ,
+            {
+                unreadNotificationsCount,
+                message: notificationId + ' marked as read',
+            }
+        );
+
         res.json({ success: true });
     } catch (e) {
         console.error('markNotificationAsRead', e);
@@ -74,6 +118,23 @@ exports.markAllNotificationsAsRead = async (req, res) => {
         const { userId } = req.body;
         if (!userId) return res.status(400).json({ error: 'userId is required' });
         await NotificationsModel.updateMany({ userId, isRead: false }, { $set: { isRead: true } });
+
+        // Get unread notifications count
+        const unreadNotificationsCount = await NotificationsModel.countDocuments({
+            userId,
+            isRead: false
+        });
+
+        // 🔊 Emit to that user notifications room
+        socketService.emitToRoom(
+            EVENTS.USER_NOTIFICATIONS_ROOM + userId,
+            EVENTS.USER_ALL_NOTIFICATIONS_MARKED_AS_READ,
+            {
+                unreadNotificationsCount,
+                message: 'All notifications marked as read',
+            }
+        );
+
         res.json({ success: true });
     } catch (e) {
         console.error('markAllNotificationsAsRead', e);

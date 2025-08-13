@@ -673,7 +673,7 @@ const carSchema = new mongoose.Schema({
     },
     auctionStatus: {
         type: String,
-        default: 'pending'
+        default: 'live'
     },
 
 

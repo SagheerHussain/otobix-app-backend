@@ -45,6 +45,13 @@ const defineJobs = (agenda) => {
                 console.warn('createAuctionEndNotifications failed:', e.message);
             }
 
+            // Tell the ui that cars list have been updated in live section
+            socketService.emitToRoom(EVENTS.LIVE_BIDS_SECTION_ROOM, EVENTS.LIVE_BIDS_SECTION_UPDATED, {
+                action: 'removed',
+                id: car._id.toString(),
+                message: 'Car removed from live bids section',
+            });
+
             // Update auction status (use the actual constant you defined)
             // await Car.updateOne(
             //     { _id: car._id },

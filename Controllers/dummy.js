@@ -1,25 +1,11 @@
-const CarDetails = require('../Models/carModel'); // Adjust path if needed
+const NotificationsModel = require('../Models/userNotificationsModel'); // Adjust path if needed
 
 exports.dummyFunctionForNow = async function (req, res) {
-    try {
-        const result = await CarDetails.updateMany(
-            {
-                defaultAuctionTime: { $exists: true },
-                auctionStatus: 'live'
-            },
-            {
-                $unset: { defaultAuctionTime: "" },
-                $set: { auctionStatus: 'live' }
-            }
-        );
+    const { deletedCount } = await NotificationsModel.deleteMany({
+        title: 'Test Notification',
+    });
+    return deletedCount; // number of docs removed
+}
 
-        console.log(`✅ Cleaned and updated ${result.modifiedCount} documents.`);
-        res.json({
-            success: true,
-            message: `Cleaned and updated ${result.modifiedCount} documents.`
-        });
-    } catch (error) {
-        console.error('❌ Failed to clean auction fields:', error);
-        res.status(500).json({ error: 'Failed to clean auction fields' });
-    }
-};
+
+

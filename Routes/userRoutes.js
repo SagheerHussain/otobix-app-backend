@@ -17,7 +17,7 @@ const authMiddleware = require("../Middlewares/auth_middleware");
 const { updateUserProfile } = require("../Controllers/userController");
 const { updateUserThroughAdmin } = require("../Controllers/userController");
 
-const { addToWishlist } = require("../Controllers/user_wishlist_controller");
+const { addToWishlist, removeFromWishlist, getUserWishlist, getUserWishlistCarsList } = require("../Controllers/user_wishlist_controller");
 
 const parser = require("../Middlewares/multer");
 router.post("/register", register);
@@ -35,4 +35,7 @@ router.get("/user-profile", authMiddleware, getUserProfile);
 router.put("/update-profile", authMiddleware, parser.single('image'), updateUserProfile);
 router.put("/update-user-through-admin", updateUserThroughAdmin);
 router.post("/add-to-wishlist", addToWishlist);
+router.post("/remove-from-wishlist", removeFromWishlist);
+router.get("/get-user-wishlist", getUserWishlist);
+router.get("/get-user-wishlist-cars-list", getUserWishlistCarsList);
 module.exports = router;
