@@ -90,6 +90,10 @@ const userschema = new mongoose.Schema({
         type: [String],
         default: [],
     },
+    myBids: {
+        type: [String],
+        default: [],
+    },
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userschema);

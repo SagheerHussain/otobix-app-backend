@@ -5,7 +5,7 @@ const CONSTANTS = require('../Utils/constants');
 const EVENTS = require('../Sockets/socket_events');
 const BidModel = require('../Models/bidModel');
 const AutoBidModelForLiveSection = require('../Models/autoBidModelForLiveSection');
-
+const UserModel = require('../Models/userModel');
 // ---- tiny per-process lock (serialize all writes per car) ----
 const __carLocks = new Map(); // carId -> Promise chain
 async function withCarLock(carId, fn) {
@@ -47,6 +47,18 @@ async function updateBid(req, res) {
             { new: true }
         );
         if (!updated) return res.status(409).json({ error: 'Race condition: please retry' });
+
+        // ✅ Add car to user's my bids list
+        await UserModel.updateOne(
+            { _id: userId },
+            { $addToSet: { myBids: carId } }
+        );
+        SocketService.emitToRoom(`${EVENTS.USER_ROOM}${userId}`, EVENTS.MY_BIDS_UPDATED, {
+            action: 'add',
+            carId: carId,
+        });
+
+
 
         await BidModel.create({ carId, userId, bidAmount: incoming, time: new Date(), via: 'manual' });
 

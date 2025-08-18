@@ -1,10 +1,11 @@
 const UserModel = require('../Models/userModel');
 const SocketService = require('../Config/socket_service');
 const EVENTS = require('../Sockets/socket_events');
+const CONSTANTS = require('../Utils/constants');
 const CarModel = require('../Models/carModel');
 
 // Add to wishlist
-exports.addToWishlist = async (req, res) => {
+exports.addToMyBids = async (req, res) => {
     try {
         const { userId, carId } = req.body;
         if (!userId || !carId) {
@@ -16,7 +17,7 @@ exports.addToWishlist = async (req, res) => {
         // $addToSet adds only if not already present (atomic, no duplicates)
         const result = await UserModel.updateOne(
             { _id: userId },
-            { $addToSet: { wishlist: normalizedCarId } }
+            { $addToSet: { myBids: normalizedCarId } }
         );
 
         if (result.matchedCount === 0) {
@@ -26,11 +27,11 @@ exports.addToWishlist = async (req, res) => {
         const added = result.modifiedCount === 1; // false means it was already there
 
         // (optional) return the latest wishlist
-        const { wishlist } = await UserModel.findById(userId).select('wishlist').lean();
+        const { myBids } = await UserModel.findById(userId).select('myBids').lean();
 
         // 🔔 realtime push (only if DB actually changed)
         if (added) {
-            SocketService.emitToRoom(`${EVENTS.USER_ROOM}${userId}`, EVENTS.WISHLIST_UPDATED, {
+            SocketService.emitToRoom(`${EVENTS.USER_ROOM}${userId}`, EVENTS.MY_BIDS_UPDATED, {
                 action: 'add',
                 carId: normalizedCarId,
             });
@@ -39,16 +40,16 @@ exports.addToWishlist = async (req, res) => {
         return res.json({
             success: true,
             added,              // true if newly added, false if duplicate
-            wishlist,           // current wishlist array
+            myBids,           // current wishlist array
         });
     } catch (err) {
-        console.error('addToWishlist error:', err);
+        console.error('addToMyBids error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };
 
 // Remove from wishlist
-exports.removeFromWishlist = async (req, res) => {
+exports.removeFromMyBids = async (req, res) => {
     try {
         const { userId, carId } = req.body;
         if (!userId || !carId) {
@@ -60,21 +61,21 @@ exports.removeFromWishlist = async (req, res) => {
         // $pull removes the value if it exists
         const result = await UserModel.updateOne(
             { _id: userId },
-            { $pull: { wishlist: normalizedCarId } }
+            { $pull: { myBids: normalizedCarId } }
         );
 
         if (result.matchedCount === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const removed = result.modifiedCount === 1; // false means it wasn't in wishlist
+        const removed = result.modifiedCount === 1; // false means it wasn't in myBids
 
-        // (optional) return updated wishlist
-        const { wishlist } = await UserModel.findById(userId).select('wishlist').lean();
+        // (optional) return updated myBids
+        const { myBids } = await UserModel.findById(userId).select('myBids').lean();
 
         // 🔔 realtime push (only if DB actually changed)
         if (removed) {
-            SocketService.emitToRoom(`${EVENTS.USER_ROOM}${userId}`, EVENTS.WISHLIST_UPDATED, {
+            SocketService.emitToRoom(`${EVENTS.USER_ROOM}${userId}`, EVENTS.MY_BIDS_UPDATED, {
                 action: 'remove',
                 carId: normalizedCarId,
             });
@@ -82,47 +83,47 @@ exports.removeFromWishlist = async (req, res) => {
 
         return res.json({
             success: true,
-            removed,            // true if removed, false if not found in wishlist
-            wishlist,           // current wishlist array
+            removed,            // true if removed, false if not found in myBids
+            myBids,           // current myBids array
         });
     } catch (err) {
-        console.error('removeFromWishlist error:', err);
+        console.error('removeFromMyBids error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };
 
 
-// Get wishlist
-exports.getUserWishlist = async (req, res) => {
+// Get myBids
+exports.getUserMyBids = async (req, res) => {
     try {
         const { userId } = req.query;
-        const user = await UserModel.findById(userId).select('wishlist').lean();
+        const user = await UserModel.findById(userId).select('myBids').lean();
         if (!user) return res.status(404).json({ error: 'User not found' });
-        res.json({ wishlist: user.wishlist || [] });
+        res.json({ myBids: user.myBids || [] });
     } catch (e) {
         res.status(500).json({ error: 'Server error' });
     }
 };
 
-// Get wishlist cars list
-exports.getUserWishlistCarsList = async (req, res) => {
+// Get myBids cars list
+exports.getUserMyBidsCarsList = async (req, res) => {
     try {
         const { userId } = req.query;
         if (!userId) return res.status(400).json({ error: 'userId is required' });
 
-        // 1) Get wishlist IDs from user
-        const user = await UserModel.findById(userId).select('wishlist').lean();
+        // 1) Get myBids IDs from user
+        const user = await UserModel.findById(userId).select('myBids').lean();
         if (!user) return res.status(404).json({ error: 'User not found' });
 
-        const wishlist = (user.wishlist || []).map(String);
-        if (wishlist.length === 0) {
-            return res.json({ success: true, myWishlistCars: [] });
+        const myBids = (user.myBids || []).map(String);
+        if (myBids.length === 0) {
+            return res.json({ success: true, myBidsCars: [] });
         }
 
 
         // 2) Fetch minimal fields + image fields needed to compute imageUrl
         const cars = await CarModel.find(
-            { _id: { $in: wishlist } },
+            { _id: { $in: myBids } },
             {
                 _id: 1,
                 make: 1,
@@ -156,14 +157,14 @@ exports.getUserWishlistCarsList = async (req, res) => {
             };
         });
 
-        // 3) Keep the same order as the wishlist array, but latest first
-        const order = new Map(wishlist.map((id, i) => [id, i]));
+        // 3) Keep the same order as the myBids array, but latest first
+        const order = new Map(myBids.map((id, i) => [id, i]));
         simplified.sort((a, b) => (order.get(b.id) ?? 0) - (order.get(a.id) ?? 0));
 
 
-        return res.json({ success: true, myWishlistCars: simplified });
+        return res.json({ success: true, myBidsCars: simplified });
     } catch (err) {
-        console.error('getMyWishlistCars error:', err);
+        console.error('getMyBidsCars error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };

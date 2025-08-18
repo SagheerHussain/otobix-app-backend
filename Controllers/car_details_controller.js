@@ -265,6 +265,18 @@ exports.updateAuctionTime = async (req, res) => {
             return res.status(404).json({ error: 'Car not found' });
         }
 
+        // emit to that car room
+        SocketService.emitToRoom(
+            EVENTS.AUCTION_TIMER_ROOM,
+            EVENTS.AUCTION_TIMER_UPDATED,
+            {
+                carId: updatedCar._id.toString(),
+                auctionStartTime: updatedCar.auctionStartTime,
+                auctionEndTime: updatedCar.auctionEndTime,
+                auctionDuration: updatedCar.auctionDuration
+            }
+        );
+
 
         // ✅ Just one line to schedule
         const AgendaJobs = require('../Config/agenda_jobs');

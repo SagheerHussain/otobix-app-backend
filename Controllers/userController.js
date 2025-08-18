@@ -1,6 +1,8 @@
 const User = require('../Models/userModel');
 const sendEmail = require('../Utils/node_mailer');
 const CONSTANTS = require('../Utils/constants');
+const SocketService = require('../Config/socket_service');
+const EVENTS = require('../Sockets/socket_events');
 
 exports.register = async (req, res) => {
   try {
@@ -78,7 +80,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// Get Approved Users List
+// Get All Users List
 exports.getAllUsersList = async (req, res) => {
   try {
     const users = await User.find({
@@ -231,6 +233,30 @@ exports.updateUserStatus = async (req, res) => {
     user.rejectionComment = approvalStatus === CONSTANTS.APPROVAL_STATUS.REJECTED ? (comment || '') : '';
 
     await user.save();
+
+    // Get approved users list
+    const approvedUsersList = await User.find({
+      approvalStatus: CONSTANTS.APPROVAL_STATUS.APPROVED,
+      userRole: { $ne: CONSTANTS.USER_ROLES.ADMIN }, // ✅ Exclude users with userRole = "admin"
+    });
+
+    // Get rejected users list
+    const rejectedUsersList = await User.find({ approvalStatus: CONSTANTS.APPROVAL_STATUS.REJECTED });
+
+    // Get pending users list
+    const pendingUsersList = await User.find({ approvalStatus: CONSTANTS.APPROVAL_STATUS.PENDING });
+
+    // Notify about user update
+    SocketService.emitToRoom(
+      EVENTS.ADMIN_HOME_ROOM,
+      EVENTS.UPDATED_ADMIN_HOME_USERS,
+      {
+        approvedUsersList,
+        rejectedUsersList,
+        pendingUsersList
+      }
+    );
+
 
     return res.status(200).json({
       success: true,
@@ -523,6 +549,30 @@ exports.updateUserThroughAdmin = async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({ message: 'User not found.' });
     }
+
+    // Get approved users list
+    const approvedUsersList = await User.find({
+      approvalStatus: CONSTANTS.APPROVAL_STATUS.APPROVED,
+      userRole: { $ne: CONSTANTS.USER_ROLES.ADMIN }, // ✅ Exclude users with userRole = "admin"
+    });
+
+    // Get rejected users list
+    const rejectedUsersList = await User.find({ approvalStatus: CONSTANTS.APPROVAL_STATUS.REJECTED });
+
+    // Get pending users list
+    const pendingUsersList = await User.find({ approvalStatus: CONSTANTS.APPROVAL_STATUS.PENDING });
+
+    // Notify about user update
+    SocketService.emitToRoom(
+      EVENTS.ADMIN_HOME_ROOM,
+      EVENTS.UPDATED_ADMIN_HOME_USERS,
+      {
+        approvedUsersList,
+        rejectedUsersList,
+        pendingUsersList
+      }
+    );
+
 
     res.status(200).json({
       message: 'User updated successfully.',

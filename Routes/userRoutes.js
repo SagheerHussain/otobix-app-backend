@@ -19,6 +19,8 @@ const { updateUserThroughAdmin } = require("../Controllers/userController");
 
 const { addToWishlist, removeFromWishlist, getUserWishlist, getUserWishlistCarsList } = require("../Controllers/user_wishlist_controller");
 
+const { addToMyBids, removeFromMyBids, getUserMyBids, getUserMyBidsCarsList } = require("../Controllers/user_my_bids_controller");
+
 const parser = require("../Middlewares/multer");
 router.post("/register", register);
 router.post("/login", login);
@@ -34,8 +36,14 @@ router.post("/check-username", checkUsername);
 router.get("/user-profile", authMiddleware, getUserProfile);
 router.put("/update-profile", authMiddleware, parser.single('image'), updateUserProfile);
 router.put("/update-user-through-admin", updateUserThroughAdmin);
+
 router.post("/add-to-wishlist", addToWishlist);
 router.post("/remove-from-wishlist", removeFromWishlist);
 router.get("/get-user-wishlist", getUserWishlist);
 router.get("/get-user-wishlist-cars-list", getUserWishlistCarsList);
+
+router.post("/add-to-my-bids", addToMyBids);
+router.post("/remove-from-my-bids", removeFromMyBids);
+router.get("/get-user-my-bids", getUserMyBids);
+router.get("/get-user-my-bids-cars-list", getUserMyBidsCarsList);
 module.exports = router;
