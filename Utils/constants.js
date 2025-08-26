@@ -15,8 +15,12 @@ module.exports = {
 
     // Auction Statuses
     AUCTION_STATUS: {
+        UPCOMING: 'upcoming',
         LIVE: 'live',
-        ENDED: 'ended',
+        OTOBUY: 'otobuy',
+        MARKETPLACE: 'marketplace',
+        LIVEAUCTIONENDED: 'liveAuctionEnded',
+        OTOBUYENDED: 'otobuyEnded',
     },
 
     // Approval Statuses

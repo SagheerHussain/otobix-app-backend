@@ -35,10 +35,19 @@ exports.getCarDetails = async (req, res) => {
 };
 
 
-
+// Get Cars list for different screens e.g. live, upcoming etc
 exports.getCarList = async (req, res) => {
     try {
-        const cars = await CarModel.find({}, {
+        const { auctionStatus } = req.query;
+
+        const filter = {};
+        if (auctionStatus) {
+            if (auctionStatus != "all") {
+                filter.auctionStatus = auctionStatus.toLowerCase();
+            }
+        }
+
+        const projection = {
             _id: 1,
             make: 1,
             model: 1,
@@ -71,7 +80,9 @@ exports.getCarList = async (req, res) => {
             rearSeatsFromRightSideDoorOpen: 1,
             dashboardFromRearSeat: 1,
             sunroofImages: 1
-        });
+        };
+
+        const cars = await CarModel.find(filter, projection);
 
         const listings = cars.map(car => {
 
@@ -251,6 +262,9 @@ exports.updateAuctionTime = async (req, res) => {
             }
         }
 
+        // ✅ Force auction status to "live" when updating
+        updateData.auctionStatus = CONSTANTS.AUCTION_STATUS.LIVE;
+
         if (Object.keys(updateData).length === 0) {
             return res.status(400).json({ error: 'No fields to update' });
         }
@@ -273,9 +287,21 @@ exports.updateAuctionTime = async (req, res) => {
                 carId: updatedCar._id.toString(),
                 auctionStartTime: updatedCar.auctionStartTime,
                 auctionEndTime: updatedCar.auctionEndTime,
-                auctionDuration: updatedCar.auctionDuration
+                auctionDuration: updatedCar.auctionDuration,
+                auctionStatus: updatedCar.auctionStatus
             }
         );
+
+        // Tell the ui that a new car is added in the live bids section
+        const { addCarToLiveBidsHelper } = require('../Helper Functions/add_car_to_live_bids_helper');
+        const addedCar = addCarToLiveBidsHelper(updatedCar);
+
+        SocketService.emitToRoom(EVENTS.LIVE_BIDS_SECTION_ROOM, EVENTS.LIVE_BIDS_SECTION_UPDATED, {
+            action: 'added',
+            id: updatedCar._id.toString(),
+            car: addedCar,
+            message: 'Car added to live bids section',
+        });
 
 
         // ✅ Just one line to schedule

@@ -52,11 +52,11 @@ const defineJobs = (agenda) => {
                 message: 'Car removed from live bids section',
             });
 
-            // Update auction status (use the actual constant you defined)
-            // await Car.updateOne(
-            //     { _id: car._id },
-            //     { $set: { auctionStatus: CONSTANTS.AUCTION_STATUS.ENDED } }
-            // );
+            // Update auction status 
+            await Car.updateOne(
+                { _id: car._id },
+                { $set: { auctionStatus: CONSTANTS.AUCTION_STATUS.LIVEAUCTIONENDED } }
+            );
 
             // deactivate autobids
             await deactivateAutoBidsForCar(carId);
