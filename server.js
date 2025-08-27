@@ -72,7 +72,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`→ http://localhost:${PORT}`);
     console.log(`→ http://${localIP}:${PORT}  (use this on another PC)`);
 
-    // For keeping render awake
+
     // ✅ Auto ping to keep Render awake
     const axios = require('axios');
     setInterval(async () => {
@@ -82,7 +82,6 @@ server.listen(PORT, '0.0.0.0', () => {
         } catch (err) {
             console.error('[AutoPing] Failed:', err.message);
         }
-        // }, 60 * 1000); // 1 minute
     }, 10 * 60 * 1000); // 10 minutes
     ///////////////////////////
 });
