@@ -68,6 +68,9 @@ exports.getCarList = async (req, res) => {
             auctionEndTime: 1,
             auctionDuration: 1,
             auctionStatus: 1,
+            upcomingTime: 1,
+            upcomingUntil: 1,
+            liveAt: 1,
             // Images
             frontMain: 1,
             rearMain: 1,
@@ -154,6 +157,9 @@ exports.getCarList = async (req, res) => {
                 auctionEndTime: car.auctionEndTime ?? null,
                 auctionDuration: parseInt(car.auctionDuration || 0),
                 auctionStatus: car.auctionStatus ?? '',
+                upcomingTime: car.upcomingTime ?? null,
+                upcomingUntil: car.upcomingUntil ?? null,
+                liveAt: car.liveAt ?? null,
                 imageUrls
 
             };

@@ -665,7 +665,7 @@ const carSchema = new mongoose.Schema({
     },
     auctionDuration: {
         type: Number,
-        default: 12
+        default: 24
     },
     auctionEndTime: {
         type: Date,
@@ -673,8 +673,14 @@ const carSchema = new mongoose.Schema({
     },
     auctionStatus: {
         type: String,
-        default: 'live'
+        default: 'upcoming'
     },
+    upcomingTime: {
+        type: Number,
+        default: 10 // minutes 
+    },
+    upcomingUntil: { type: Date, default: null },
+  liveAt:        { type: Date, default: null },
 
 
 });

@@ -128,17 +128,5 @@ async function createAuctionEndNotifications(car, biddersList) {
 
     await NotificationsModel.insertMany(docs, { ordered: false });
 
-    // Optional realtime push (only if you have these events/rooms wired)
-    // const created = await NotificationsModel.insertMany(docs, { ordered: false });
-
-    // try {
-    //     if (EVENTS?.NOTIFICATION_CREATED) {
-    //         for (const n of created) {
-    //             socketService.emitToRoom(`user-${n.userId}`, EVENTS.NOTIFICATION_CREATED, { notification: n });
-    //         }
-    //     }
-    // } catch (e) {
-    //     console.warn('[AgendaJobs] Socket push for notifications failed:', e.message);
-    // }
+   
 }
-/** ---------------------------------------------------------------- */

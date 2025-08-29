@@ -9,6 +9,7 @@ module.exports = {
     AUCTION_ENDED: 'auction-ended',
     WISHLIST_UPDATED: 'wishlist-updated',
     MY_BIDS_UPDATED: 'my-bids-updated',
+    UPCOMING_BIDS_SECTION_UPDATED: 'upcoming-bids-section-updated',
     LIVE_BIDS_SECTION_UPDATED: 'live-bids-section-updated',
     USER_NOTIFICATION_CREATED: 'user-notification-created',
     USER_NOTIFICATION_MARKED_AS_READ: 'user-notification-marked-as-read',
@@ -18,6 +19,7 @@ module.exports = {
 
     // Rooms
     USER_ROOM: 'user-room:',
+    UPCOMING_BIDS_SECTION_ROOM: 'upcoming-bids-section-room:',
     LIVE_BIDS_SECTION_ROOM: 'live-bids-section-room:',
     USER_NOTIFICATIONS_ROOM: 'user-notifications-room:',
     AUCTION_TIMER_ROOM: 'auction-timer-room:',
