@@ -4,6 +4,7 @@ const Car = require('../../Models/carModel');
 const SocketService = require('../../Config/socket_service');
 const CONSTANTS = require('../../Utils/constants');
 const EVENTS = require('../../Sockets/socket_events');
+const { scheduleEndLiveAuction } = require('./start_live_auction_job');
 
 /**
  * Job: move-car-to-live
@@ -13,7 +14,7 @@ const EVENTS = require('../../Sockets/socket_events');
  */
 module.exports = (agenda) => {
   agenda.define(
-    'move-car-from-upcoming-to-live',
+    CONSTANTS.AGENDA_JOBS.MOVE_CAR_FROM_UPCOMING_TO_LIVE,
     { priority: 'high', concurrency: 50, lockLifetime: 30_000 },
     async (job, done) => {
       try {
@@ -36,38 +37,43 @@ module.exports = (agenda) => {
         // If car is moved from UPCOMING to LIVE
         if (result.modifiedCount === 1) {
 
-            // Fetch updated doc
-            const updated = await Car.findById(carId).lean();
+          // Fetch updated doc
+          const updated = await Car.findById(carId).lean();
 
-            const carDataForCarsListModelInFlutter = buildListing(updated);
+          const carDataForCarsListModelInFlutter = buildListing(updated);
 
-            // 🔴 EMIT to upcoming room (removed)
-            SocketService.emitToRoom(
-              EVENTS.UPCOMING_BIDS_SECTION_ROOM,
-              EVENTS.UPCOMING_BIDS_SECTION_UPDATED,
-              {
-                action: 'removed',
-                id: carId.toString(),
-                car: carDataForCarsListModelInFlutter,
-                message: 'Car moved from UPCOMING to LIVE',
-              }
-            );
-  
-            // 🟢 EMIT to live room (added)
-            SocketService.emitToRoom(
-              EVENTS.LIVE_BIDS_SECTION_ROOM,
-              EVENTS.LIVE_BIDS_SECTION_UPDATED,
-              {
-                action: 'added',
-                id: carId.toString(),
-                car: carDataForCarsListModelInFlutter,
-                message: 'Car is now LIVE',
-              }
-            );
+          // 🔴 EMIT to upcoming room (removed)
+          SocketService.emitToRoom(
+            EVENTS.UPCOMING_BIDS_SECTION_ROOM,
+            EVENTS.UPCOMING_BIDS_SECTION_UPDATED,
+            {
+              action: 'removed',
+              id: carId.toString(),
+              car: carDataForCarsListModelInFlutter,
+              message: 'Car moved from UPCOMING to LIVE',
+            }
+          );
+
+          // 🟢 EMIT to live room (added)
+          SocketService.emitToRoom(
+            EVENTS.LIVE_BIDS_SECTION_ROOM,
+            EVENTS.LIVE_BIDS_SECTION_UPDATED,
+            {
+              action: 'added',
+              id: carId.toString(),
+              car: carDataForCarsListModelInFlutter,
+              message: 'Car is now LIVE',
+            }
+          );
+
+
+          // Start live auction after you set auctionStatus: 'live', liveAt, auctionStartTime, auctionDuration, auctionEndTime
+          await scheduleEndLiveAuction(agenda, carId, updated.auctionEndTime || new Date(now.getTime() + updated.auctionDuration * 3600 * 1000));
+
 
 
           // Cleanup (defense-in-depth): remove any stray future jobs for same car
-          await agenda.cancel({ name: 'move-car-from-upcoming-to-live', 'data.carId': carId });
+          await agenda.cancel({ name: CONSTANTS.AGENDA_JOBS.MOVE_CAR_FROM_UPCOMING_TO_LIVE, 'data.carId': carId });
         }
 
         return done();
@@ -88,18 +94,18 @@ module.exports.scheduleMoveCarFromUpcomingToLive = async function scheduleMoveCa
   carId,
   when // Date or parsable string
 ) {
-  const job = agenda.create('move-car-from-upcoming-to-live', { carId });
+  const job = agenda.create(CONSTANTS.AGENDA_JOBS.MOVE_CAR_FROM_UPCOMING_TO_LIVE, { carId });
 
   // Uniqueness: prevent duplicate jobs for the same car
-  job.unique({ name: 'move-car-from-upcoming-to-live', 'data.carId': carId });
+  job.unique({ name: CONSTANTS.AGENDA_JOBS.MOVE_CAR_FROM_UPCOMING_TO_LIVE, 'data.carId': carId });
 
   job.schedule(when);
   await job.save();
 
 
 
-   // ✅ Immediately announce to UPCOMING room (single place, no extra jobs)
-   try {
+  // ✅ Immediately announce to UPCOMING room (single place, no extra jobs)
+  try {
     // Read fresh car (optional but nice to send full payload)
     const car = await Car.findById(carId).lean();
 
@@ -119,7 +125,7 @@ module.exports.scheduleMoveCarFromUpcomingToLive = async function scheduleMoveCa
         }
       );
     }
-  } catch (_) {}
+  } catch (_) { }
 
 
   return job;

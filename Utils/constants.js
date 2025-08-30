@@ -52,4 +52,12 @@ module.exports = {
         MESSAGE: 'message',
         DATA: 'data',
     },
+
+    // Agenda jobs
+    AGENDA_JOBS: {
+        MOVE_CAR_FROM_UPCOMING_TO_LIVE: 'move-car-from-upcoming-to-live',
+        START_LIVE_AUCTION: 'start-live-auction',
+        END_LIVE_AUCTION: 'end-live-auction',
+
+    }
 };

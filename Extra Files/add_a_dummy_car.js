@@ -2,6 +2,7 @@
 const CarModel = require('../Models/carModel');
 const { getAgenda } = require('../Agenda/agenda2');
 const { scheduleMoveCarFromUpcomingToLive } = require('../Agenda/Agenda Jobs/move_car_from_upcoming_to_live_job');
+const CONSTANTS = require('../Utils/constants');
 // const SocketService = require('../Config/socket_service');
 // const CONSTANTS = require('../Utils/constants');
 // const EVENTS = require('../Sockets/socket_events');
@@ -111,7 +112,7 @@ exports.addADummyCar = async function (req, res) {
     const agenda = getAgenda();
 
     // Safe to cancel any prior job if this was an upsert/overwrite
-    await agenda.cancel({ name: 'move-car-from-upcoming-to-live', 'data.carId': carId.toString() });
+    await agenda.cancel({ name: CONSTANTS.AGENDA_JOBS.MOVE_CAR_FROM_UPCOMING_TO_LIVE, 'data.carId': carId.toString() });
 
     await scheduleMoveCarFromUpcomingToLive(agenda, carId, flipAt);
 
